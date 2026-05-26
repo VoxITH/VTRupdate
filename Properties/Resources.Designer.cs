@@ -133,7 +133,7 @@ namespace XVLauncher.Properties {
         }
         
         /// <summary>
-        ///   Cerca una stringa localizzata simile a TestApp.
+        ///   Cerca una stringa localizzata simile a Voxia TrainerRising.
         /// </summary>
         internal static string SaveDirectory {
             get {
@@ -151,3 +151,4 @@ namespace XVLauncher.Properties {
         }
     }
 }
+

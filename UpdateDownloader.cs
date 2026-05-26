@@ -33,7 +33,7 @@ namespace XVLauncher
         protected override async Task DownloadImplementation()
         {
 
-            string[] roots = Directory.GetDirectories(Directory.GetCurrentDirectory() + "\\" + Properties.Settings.Default.GameDirectory);
+            string[] roots = Directory.GetDirectories(Directory.GetCurrentDirectory() + "\\" + "Voxia TrainerRising");
             if (roots.Length > 1)
             {
                 throw new DirectoryNotFoundException(message: string.Format("Multiple roots:\n{0}", string.Join("\n", roots)));
@@ -88,3 +88,4 @@ namespace XVLauncher
 
     }
 }
+

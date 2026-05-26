@@ -31,7 +31,7 @@ namespace XVLauncher
         private readonly DispatcherTimer UpdateTimer = new DispatcherTimer();
         private UpdateHandler updateHandler;
         private bool inOptions, inNotice = false;
-        private readonly string FILE_NAME = Properties.Settings.Default.GameDirectory;
+        private const string FILE_NAME = "Voxia TrainerRising";
 
         /// <summary>
         /// This method is called when the program starts.<br/>
@@ -605,4 +605,5 @@ namespace XVLauncher
 
     }
 }
+
 

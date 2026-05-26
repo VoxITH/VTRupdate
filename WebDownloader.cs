@@ -26,7 +26,7 @@ namespace XVLauncher
         protected async override Task DownloadImplementation()
         {
             var totalsize = GetFileSize(url);
-            Directory.CreateDirectory(Directory.GetCurrentDirectory() + "\\" + Properties.Settings.Default.GameDirectory);
+            Directory.CreateDirectory(Directory.GetCurrentDirectory() + "\\" + "Voxia TrainerRising");
             if (totalsize == -1)
             {
                 window.Dispatcher.Invoke(() =>
@@ -56,7 +56,8 @@ namespace XVLauncher
                 client.Dispose();
             };
             client.OpenRead(url);
-            await client.DownloadFileTaskAsync(new Uri(url), Directory.GetCurrentDirectory() + "\\" + Properties.Settings.Default.GameDirectory + ".zip");
+            await client.DownloadFileTaskAsync(new Uri(url), Directory.GetCurrentDirectory() + "\\" + "Voxia TrainerRising" + ".zip");
         }
     }
 }
+

@@ -85,7 +85,7 @@ namespace XVLauncher.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("TestApp")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Voxia TrainerRising")]
         public string GameDirectory {
             get {
                 return ((string)(this["GameDirectory"]));
@@ -108,3 +108,4 @@ namespace XVLauncher.Properties {
         }
     }
 }
+
