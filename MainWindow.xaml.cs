@@ -317,6 +317,11 @@ namespace XVLauncher
             try
             {
                 string extractedDirectory = zipPath.Replace(".zip", "");
+                if (Directory.Exists(extractedDirectory))
+                {
+                    Directory.Delete(extractedDirectory, true);
+                }
+                Directory.CreateDirectory(extractedDirectory);
                 using (ZipFile zip = ZipFile.Read(zipPath))
                 {
                     int totalFiles = zip.Count;
@@ -616,6 +621,7 @@ namespace XVLauncher
 
     }
 }
+
 
 
 
