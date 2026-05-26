@@ -329,7 +329,25 @@ namespace XVLauncher
                     foreach (ZipEntry d in zip)
                     {
                         Debug.WriteLine(d.FileName);
-                        d.Extract(extractedDirectory, ExtractExistingFileAction.OverwriteSilently);
+                        string safeName = d.FileName.Replace('/', Path.DirectorySeparatorChar);
+                        string targetPath = Path.Combine(extractedDirectory, safeName);
+                        if (d.IsDirectory)
+                        {
+                            if (File.Exists(targetPath))
+                                File.Delete(targetPath);
+                            Directory.CreateDirectory(targetPath);
+                        }
+                        else
+                        {
+                            string parent = Path.GetDirectoryName(targetPath);
+                            if (!Directory.Exists(parent))
+                                Directory.CreateDirectory(parent);
+                            if (Directory.Exists(targetPath))
+                                Directory.Delete(targetPath, true);
+                            if (File.Exists(targetPath))
+                                File.Delete(targetPath);
+                            d.Extract(extractedDirectory, ExtractExistingFileAction.OverwriteSilently);
+                        }
                         filesExtracted++;
                         float progress = (float)filesExtracted / totalFiles * 100;
                         this.Dispatcher.Invoke(() =>
@@ -621,6 +639,7 @@ namespace XVLauncher
 
     }
 }
+
 
 
 
