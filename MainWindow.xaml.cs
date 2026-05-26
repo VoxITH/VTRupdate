@@ -285,11 +285,20 @@ namespace XVLauncher
             EnableGUI(false);
             Downloader downloader = new WebDownloader(this, (await updateHandler.GetLatestRelease()).Link);
             await downloader.Download();
-            await Task.Run(() => { Unzip(Directory.GetCurrentDirectory() + "\\" + FILE_NAME + ".zip"); });
-            //delete the zip after downloading
-            if (File.Exists(Directory.GetCurrentDirectory() + "\\" + FILE_NAME + ".zip"))
+            string zipPath = Directory.GetCurrentDirectory() + "\\" + FILE_NAME + ".zip";
+            bool installed = await Unzip(zipPath);
+            //delete the zip after extracting
+            if (File.Exists(zipPath))
             {
-                File.Delete(Directory.GetCurrentDirectory() + "\\" + FILE_NAME + ".zip");
+                File.Delete(zipPath);
+            }
+            if (installed)
+            {
+                LaunchGame(sender, e);
+            }
+            else
+            {
+                EnableGUI(true);
             }
         }
 
@@ -303,7 +312,7 @@ namespace XVLauncher
         /// Unzip a file and show progress in <see cref="BarGrid"/>.
         /// </summary>
         /// <param name="zipPath">Archive to uzip's full path.</param>
-        private async void Unzip(string zipPath)
+        private async Task<bool> Unzip(string zipPath)
         {
             try
             {
@@ -333,6 +342,7 @@ namespace XVLauncher
                     InitPlayButton();
 
                 });
+                return true;
             }
             catch (Exception ex)
             {
@@ -341,6 +351,7 @@ namespace XVLauncher
                 this.recoveryButton.IsEnabled = true;
                 UpdateBarProgress(0);
                 PhpManager.ReportError(String.Format("Error in MainWindow.Unzip({0}): {1}", zipPath, ex.Message));
+                return false;
             }
         }
 
@@ -605,5 +616,6 @@ namespace XVLauncher
 
     }
 }
+
 
 
