@@ -14,6 +14,7 @@ if (Test-Path -LiteralPath $stage) {
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
 $excludeTop = @(
+  "Backups",
   "GitHubRelease",
   "UpdatePackages",
   ".git",
@@ -39,3 +40,4 @@ Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -Force
 Remove-Item -LiteralPath $stage -Recurse -Force
 
 Write-Host $zip
+
