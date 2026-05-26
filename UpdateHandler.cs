@@ -1,240 +1,121 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics; // For debug only
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
-using XVLauncher.Resources;
 
 namespace XVLauncher
 {
     /// <summary>
-    /// Class for handling updates with git-based repositories.
+    /// GitHub Releases based updater.
+    /// The launcher reads update_url.txt next to the exe when present; otherwise it
+    /// falls back to Properties.Resources.UpdateUrl.
+    /// Accepted formats:
+    /// - https://github.com/OWNER/REPO
+    /// - https://github.com/OWNER/REPO/releases/latest
+    /// - https://api.github.com/repos/OWNER/REPO/releases/latest
     /// </summary>
     public class UpdateHandler
     {
-        /// <summary>
-        /// The instance of MainWindow that contains GUI elements which show update progress and status.
-        /// </summary>
         protected MainWindow Window;
-        private WebClient Client;
-        private dynamic Res, Commits, Infos;
         private string Link, TargetCommit, Tag;
 
-        /// <summary>
-        /// Constructor of the UpdateHandler class.
-        /// </summary>
-        /// <param name="window">The window where the updater will be called.</param>
         public UpdateHandler(MainWindow window)
         {
             Window = window;
         }
 
-        /// <summary>
-        /// Check if it there is a new release on GitLab repo.
-        /// </summary>
-        /// <returns>true if there is an update available, false otherwise.</returns>
         public async Task<bool> CheckUpdateAvailability()
         {
-            if (Properties.Settings.Default.CurrentCommit != (await GetLatestRelease()).Commit)
+            var latest = await GetLatestRelease();
+            string current = Properties.Settings.Default.Version;
+            if (String.IsNullOrWhiteSpace(current) || current == "na")
             {
-                Window.infoLabel.Content = "There's an update avaible.";
+                Window.infoLabel.Content = "Installazione disponibile.";
+                return true;
+            }
+            if (!String.Equals(current, latest.Tag, StringComparison.OrdinalIgnoreCase))
+            {
+                Window.infoLabel.Content = "Aggiornamento disponibile.";
                 return true;
             }
             return false;
         }
 
-        /// <summary>
-        /// Compares the currently stored commit id with a target commit id and returns a tuple of list with the old paths and new paths of changed files.
-        /// </summary>
-        /// <param name="targetCommit">The target commit id using for comparing.</param>
-        /// <returns></returns>
-        public async Task<(List<string> oldPath, List<string> newPath)> Compare(string targetCommit)
+        // Kept for compatibility with old XVLauncher flow. Full release zips are
+        // used now, so there is no GitLab-style per-file diff to calculate.
+        public Task<(List<string> oldPath, List<string> newPath)> Compare(string targetCommit)
         {
-            Window.button.IsEnabled = false;
-            // The current latest commit SHA. It should be stored in the Program settings.
-            string Current = Properties.Settings.Default.CurrentCommit;
-            // The target latest commit SHA. It can be retrieved with the "GetLatestRelease" method.
-            string Target = targetCommit;
-
-            // This is the list of items modified between the commits. 
-            // Probably all the "oldPaths" should be deleted, whilst all the "newPaths" redownloaded.
-            // The list of old paths retrieved.
-            List<string> oldPaths = new List<string>();
-            // The list of new paths retrieved.
-            List<string> newPaths = new List<string>();
-
-            // The url for the API request.
-            string api_request = $"https://gitlab.com/api/v4/projects/{Properties.Settings.Default.ProjectID}/repository/compare?ref_name=Release&from={Current}&to={Target}&per_page=1000";
-            Uri api_request_uri = new Uri(api_request);
-
-            SetUpClient(api_request);
-
-            // Getting the commits list
-            Client.DownloadStringCompleted += new DownloadStringCompletedEventHandler(DownloadCommitsListEventHandler);
-            await Client.DownloadStringTaskAsync(api_request_uri);
-            Client.Dispose();
-            SetUpClient(api_request);
-            //Getting the id list for the commits found.
-            List<string> ids = new List<string>();
-            foreach (var c in Commits)
-            {
-                dynamic val = JsonConvert.DeserializeObject(c.ToString());
-                ids.Add(val.id.ToString());
-            }
-            //Utility for the GUI update.
-            int progress = 0;
-            int full = ids.Count;
-            foreach (var id in ids)
-            {
-                Debug.WriteLine($"Checking commit {id}");
-                int page = 1;
-                string url = $"https://gitlab.com/api/v4/projects/{Properties.Settings.Default.ProjectID}/repository/commits/" + id + $"/diff?per_page=1000000&page={page}";
-                Client.BaseAddress = url;
-                Debug.WriteLine($"Url is: {url}");
-                Client.Headers.Add("Content-Type:application/json; charset=utf-8"); //Content-Type  
-                Client.Headers.Add("Accept:application/json");
-                Client.Headers["Private-Token"] = Properties.Resources.AccessToken;
-                //await Client.DownloadStringTaskAsync(api_request_uri);
-                Client.DownloadStringCompleted += new DownloadStringCompletedEventHandler(DownloadCommitInfoEventHandler);
-                await Client.DownloadStringTaskAsync(url);
-                progress++;
-                Window.Dispatcher.Invoke(() =>
-                {
-                    double percentage = (float)progress / full * 100;
-                    Window.infoLabel.Content = String.Format("Comparing the differences between the old release and the new one... {0:0.##}%", percentage);
-                    Window.UpdateBarProgress(percentage);
-                });
-                while (Infos.Count > 0)
-                {
-                    foreach (var info in Infos)
-                    {
-                        var desInfo = JsonConvert.DeserializeObject(info.ToString());
-                        string oldPath = desInfo.old_path.ToString();
-                        string newPath = desInfo.new_path.ToString();
-                        if ((bool)desInfo.new_file)
-                        {
-                            if (!newPaths.Contains(newPath))
-                                newPaths.Add(newPath);
-                        }
-                        else if ((bool)desInfo.renamed_file)
-                        {
-                            if (!newPaths.Contains(newPath))
-                                newPaths.Add(newPath);
-                            if (newPaths.Contains(oldPath))
-                                newPaths.Remove(oldPath);
-                            if (!oldPaths.Contains(oldPath))
-                                oldPaths.Add(oldPath);
-                        }
-                        else if ((bool)desInfo.deleted_file)
-                        {
-                            if (newPaths.Contains(newPath))
-                                newPaths.Remove(newPath);
-                            if (!oldPaths.Contains(oldPath))
-                                oldPaths.Add(oldPath);
-                        }
-                        else
-                        {
-                            if (!newPaths.Contains(newPath))
-                                newPaths.Add(newPath);
-                        }
-                    }
-
-                    page += 1;
-                    url = $"https://gitlab.com/api/v4/projects/{Properties.Settings.Default.ProjectID}/repository/commits/" + id + $"/diff?per_page=1000000&page={page}";
-                    await Client.DownloadStringTaskAsync(url);
-                }
-            }
-
-            oldPaths.Sort();
-            newPaths.Sort();
-            string results = "";
-            foreach (string s in newPaths)
-            {
-                results += "\"" + s + "\"" + "\n";
-            }
-            Window.Dispatcher.Invoke(() =>
-            {
-                Debug.WriteLine(results);
-            });
-            Client.Dispose();
-            return (oldPaths, newPaths);
+            return Task.FromResult((new List<string>(), new List<string>()));
         }
 
-        private void SetUpClient(string api_request)
+        private string GetConfiguredUpdateUrl()
         {
-
-            Client = new WebClient
+            string local = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update_url.txt");
+            if (File.Exists(local))
             {
-                BaseAddress = api_request
-            };
-            Client.Headers.Add("Content-Type:application/json"); //Content-Type  
-            Client.Headers.Add("Accept:application/json");
-            Client.Headers["Private-Token"] = Properties.Resources.AccessToken;
+                string fromFile = File.ReadAllText(local).Trim();
+                if (!String.IsNullOrWhiteSpace(fromFile))
+                    return NormalizeGitHubUrl(fromFile);
+            }
+            return NormalizeGitHubUrl(Properties.Resources.UpdateUrl);
         }
 
-        private void DownloadCommitsListEventHandler(object sender, DownloadStringCompletedEventArgs e)
+        private string NormalizeGitHubUrl(string url)
         {
-            if (e.Error != null)
+            url = (url ?? "").Trim();
+            if (url.Length == 0)
+                throw new InvalidOperationException("URL update GitHub non configurato.");
+            if (url.Contains("api.github.com/repos/") && url.Contains("/releases/latest"))
+                return url;
+            if (url.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase))
             {
-                //TODO: show error on label
-                PhpManager.ReportError(e.Error.Message);
+                Uri uri = new Uri(url);
+                string[] parts = uri.AbsolutePath.Trim('/').Split('/');
+                if (parts.Length >= 2)
+                    return $"https://api.github.com/repos/{parts[0]}/{parts[1]}/releases/latest";
             }
-            else
-            {
-                Res = JsonConvert.DeserializeObject(e.Result.ToString());
-                Commits = JsonConvert.DeserializeObject(Res.commits.ToString());
-            }
-        }
-
-        private void DownloadCommitInfoEventHandler(object sender, DownloadStringCompletedEventArgs e)
-        {
-            if (e.Error != null)
-            {
-                //TODO: show error on label
-                PhpManager.ReportError(e.Error.Message);
-            }
-            else
-            {
-                Infos = JsonConvert.DeserializeObject(e.Result.ToString());
-            }
+            return url;
         }
 
         private async Task SetLatestRelease()
         {
-            string Url = $"https://gitlab.com/api/v4/projects/{Properties.Settings.Default.ProjectID}/releases";
-            string Link = "";
-            string TargetCommit = "";
-            string Tag = "";
-            using (var client = new System.Net.WebClient()) //WebClient  
+            string url = GetConfiguredUpdateUrl();
+            using (var client = new WebClient())
             {
-                client.BaseAddress = Url;
-                client.Headers.Add("Content-Type:application/json"); //Content-Type  
-                client.Headers.Add("Accept:application/json");
-                client.Headers["Private-Token"] = Properties.Resources.AccessToken;
+                client.Headers.Add("User-Agent", "VTR-XVLauncher");
+                client.Headers.Add("Accept", "application/vnd.github+json");
+                string json = await client.DownloadStringTaskAsync(url);
+                dynamic latest = JsonConvert.DeserializeObject(json);
 
-                // Getting releases list
-                dynamic res = JsonConvert.DeserializeObject(await client.DownloadStringTaskAsync(Url));
+                Tag = latest.tag_name != null ? latest.tag_name.ToString() : "";
+                TargetCommit = latest.target_commitish != null ? latest.target_commitish.ToString() : Tag;
 
-                // Getting the latest release (it will always be the first item in the retrieved collection)
-                dynamic latest = JsonConvert.DeserializeObject(res[0].ToString());
-                dynamic latestCommit = JsonConvert.DeserializeObject(latest.commit.ToString());
-                TargetCommit = latestCommit.id.ToString();
-                Tag = latest.tag_name.ToString();
-                //Getting the direct link to the .zip asset of the release
-                dynamic latestZip = JsonConvert.DeserializeObject(latest.assets.sources[0].ToString());
-                Link = latestZip.url.ToString();
-                string results = latest.ToString();
+                string chosen = "";
+                foreach (var asset in latest.assets)
+                {
+                    string name = asset.name != null ? asset.name.ToString() : "";
+                    string dl = asset.browser_download_url != null ? asset.browser_download_url.ToString() : "";
+                    if (dl.Length == 0) continue;
+                    if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                    {
+                        chosen = dl;
+                        if (name.IndexOf("VTR", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            name.IndexOf("Voxia", StringComparison.OrdinalIgnoreCase) >= 0)
+                            break;
+                    }
+                }
+
+                if (String.IsNullOrWhiteSpace(Tag))
+                    throw new InvalidOperationException("La release GitHub non ha un tag.");
+                if (String.IsNullOrWhiteSpace(chosen))
+                    throw new InvalidOperationException("La release GitHub non contiene asset .zip.");
+
+                Link = chosen;
             }
-            this.Link = Link;
-            this.TargetCommit = TargetCommit;
-            this.Tag = Tag;
         }
 
-        /// <summary>
-        /// Retrieves the latest github release informations.
-        /// </summary>
-        /// <returns>last release download link, last commit name, last release tag.</returns>
         public async Task<(string Link, string Commit, string Tag)> GetLatestRelease()
         {
             if (this.TargetCommit == null)
@@ -245,4 +126,3 @@ namespace XVLauncher
         }
     }
 }
-

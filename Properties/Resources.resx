@@ -137,7 +137,7 @@ https://github.com/settings/tokens</comment>
     <value>#FF1B86FF</value>
   </data>
   <data name="Executable" xml:space="preserve">
-    <value>Test.exe</value>
+    <value>Game.exe</value>
   </data>
   <data name="InstallDirectory" xml:space="preserve">
     <value />
@@ -147,11 +147,12 @@ https://github.com/settings/tokens</comment>
     <value>1.0.0</value>
   </data>
   <data name="SaveDirectory" xml:space="preserve">
-    <value>TestApp</value>
+    <value>VTR</value>
     <comment>Name of the directory inside User\Saved Games\ containg saving data</comment>
   </data>
   <data name="UpdateUrl" xml:space="preserve">
-    <value>https://gitlab.com/sasso-effe/xvlauncher-test/-/raw/{0}/</value>
-    <comment>GitLab repo with releases. This is a demo: put here link to your repo</comment>
+    <value>https://github.com/INSERISCI_UTENTE/INSERISCI_REPO</value>
+    <comment>GitHub repository or GitHub latest-release API URL. update_url.txt next to the launcher overrides this value.</comment>
   </data>
 </root>
+

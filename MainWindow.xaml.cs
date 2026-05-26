@@ -136,12 +136,7 @@ namespace XVLauncher
                     this.button.Background = b;
                     this.button.Content = Properties.Langs.Lang.update;
                     RemoveRoutedEventHandlers(this.button, Button.ClickEvent);
-                    this.button.Click += async (s, ee) =>
-                    {
-                        (List<string> oldPath, List<string> newPath) = await updateHandler.Compare(commit);
-                        await new UpdateDownloader(this, String.Format(Properties.Resources.UpdateUrl, tag), oldPath, newPath, updateHandler).Download();
-                        InitPlayButton();
-                    };
+                    this.button.Click += DownloadAndInstall;
                     this.infoLabel.Content = String.Format(Properties.Langs.Lang.version_available, tag);
                 }
                 else
@@ -320,7 +315,7 @@ namespace XVLauncher
                     foreach (ZipEntry d in zip)
                     {
                         Debug.WriteLine(d.FileName);
-                        d.Extract(extractedDirectory);
+                        d.Extract(extractedDirectory, ExtractExistingFileAction.OverwriteSilently);
                         filesExtracted++;
                         float progress = (float)filesExtracted / totalFiles * 100;
                         this.Dispatcher.Invoke(() =>
@@ -610,3 +605,4 @@ namespace XVLauncher
 
     }
 }
+
