@@ -269,7 +269,75 @@ const usage=(n,reg='mc',month='2026-09')=>{const entries=DATA.meta[reg+'/'+month
 const periods={mc:['2026-09'],mb:['2026-07','2026-08'],ma:['2026-05','2026-06']};
 function weaknesses(names){return TYPES.map(t=>({type:t,weak:names.filter(n=>effectiveness(t,DATA.dex[n]?.types)>1).length,resist:names.filter(n=>effectiveness(t,DATA.dex[n]?.types)<1).length})).sort((a,b)=>b.weak-a.weak);}
 function isLegalTeam(team,reg){return team.length===6&&new Set(team).size===6&&team.every(n=>RULES.isLegal(n,reg))&&team.filter(n=>RULES.isMega(n)).length<=2&&new Set(team.map(n=>RULES.baseName(n))).size===6;}
-function teamScore(team,anchor,mode,reg,month){const rs=team.map(role),all=new Set(rs.flatMap(r=>[...r])),mons=team.map(n=>DATA.dex[n]);const risks=weaknesses(team);let total=0;
+
+/* A niche pick is the problem to solve, not a penalty.
+   Tournament popularity informs threat selection, never eligibility or automatic rejection. */
+const ANTIMETA_BLUEPRINTS={
+ Alcremie:{
+  title:'Alcremie diventa la win condition (non solo Decorate)',
+  hypothesis:'Calm Mind + Acid Armor alzano anche Stored Power: il rivale può prepararsi alla solita Decorate e sottovalutare Alcremie.',
+  payoff:'Dopo due turni di setup produce pressione Psychic/Fairy e recupera PS con Draining Kiss. È una proposta da provare, non un KO garantito.',
+  opening:'Apri con Fake Out/Intimidate o redirection; cerca il primo Calm Mind, usa Acid Armor soltanto se i turni lo consentono, poi attacca. Sotto Trick Room valuta i turni rimasti.',
+  problems:['Gholdengo e attaccanti Steel','Kingambit e altri Dark immuni a Stored Power','Sneasler / mosse Poison','pressione immediata prima del secondo turno di setup'],
+  partners:['Incineroar','Rillaboom','Sinistcha','Armarouge','Delphox-Mega','Golisopod-Mega'],
+  counters:['Gholdengo','Kingambit','Sneasler'],
+  required:['Incineroar','Armarouge','Sinistcha'],
+  supportedMode:'balanced'
+ },
+ Dedenne:{
+  title:'Dedenne controlla il turno decisivo',
+  hypothesis:'Super Fang dimezza i PS mentre Nuzzle paralizza bersagli vulnerabili: minaccia i core più forti senza richiedere danni diretti elevati.',
+  payoff:'Un attaccante alleato deve capitalizzare immediatamente sul Super Fang e sui turni creati dalla paralisi; Rain Dance può rovesciare Sun.',
+  opening:'Lead con un attaccante che punisce il bersaglio ridotto di PS. Evita di fare Nuzzle su Ground, Electric, o avversari protetti da condizioni speciali.',
+  problems:['Ground immuni a Nuzzle','Electric immuni alla paralisi','Fake Out e KO immediati','terreni o protezioni che ostacolano il controllo'],
+  partners:['Rillaboom','Salamence-Mega','Golisopod-Mega','Incineroar','Milotic','Pelipper'],
+  counters:['Garchomp-Mega-Z','Rillaboom','Raichu-Mega-Y'],
+  required:['Rillaboom','Salamence-Mega','Incineroar'],
+  supportedMode:'balanced'
+ }
+};
+function metaSurprisePlan(anchor,team,mode,reg,month,intent){
+ const raw=ANTIMETA_BLUEPRINTS[anchor],used=(usage(anchor,reg,month)||0);
+ const threats=MC_META_EVIDENCE.top.slice(0,14)
+   .filter(([n])=>DATA.dex[n]&&n!==anchor);
+ const responses=threats.map(([name,pct])=>{
+  const foe=DATA.dex[name];
+  const offenses=team.filter(n=>n!==anchor&&DATA.dex[n]&&DATA.dex[n].types.some(t=>effectiveness(t,foe.types)>1));
+  return {name,frequency:pct,candidates:offenses.slice(0,3)};
+ });
+ const coverage=responses.filter(x=>x.candidates.length>0);
+ const found=raw&&raw.partners.filter(n=>team.includes(n));
+ const base={
+ title:raw&&intent==='antimeta'?raw.title:intent==='antimeta'?'Un ruolo inatteso per '+anchor:'Set collaudato e coerente',
+ hypothesis:raw&&intent==='antimeta'?raw.hypothesis:'Individua un vantaggio specifico basato su ruolo e matchup; non attribuisco automaticamente una gimmick a un Pokémon.',
+ payoff:raw&&intent==='antimeta'?raw.payoff:'Il vantaggio va misurato nei quattro Pokémon portati e nel piano di gioco.',
+ opening:raw&&intent==='antimeta'?raw.opening:'Analizza la team preview, crea una finestra per il fulcro e fai lavorare la sua utility.',
+ problems:raw?.problems||['Contromisure del meta al ruolo scelto','costo opportunità dello slot off-meta'],
+ checks:coverage.slice(0,7),
+ supporting:found||[],
+ coverageCount:coverage.length,coverageTotal:responses.length,
+ rarity:used===0?'Usage sotto la soglia dei dati disponibili':used.toFixed(2)+'% usage nella ladder campionata',
+ caveat:'Le risposte sono di tipo, non KO certificati. Il valore della sorpresa non è una probabilità di vittoria.',
+ intent
+ };
+ return base;
+}
+function anchoredMetaValue(team,anchor,intent,reg,month){
+ if(intent!=='antimeta')return 0;
+ const plan=ANTIMETA_BLUEPRINTS[anchor],answers=metaSurprisePlan(anchor,team,'balanced',reg,month,intent);
+ let score=answers.coverageCount*1.4;
+ if(plan){
+   for(const name of plan.partners)if(team.includes(name))score+=5;
+   for(const name of plan.required)if(team.includes(name))score+=8;
+   if(anchor==='Alcremie'){
+     if(!team.some(n=>['Incineroar','Arcanine-Hisui','Delphox-Mega','Armarouge','Charizard-Mega-Y'].includes(n)))score-=55;
+     if(!team.some(n=>role(n).has('fakeout')||role(n).has('redirect')))score-=55;
+   }
+ }
+ return score;
+}
+
+function teamScore(team,anchor,mode,reg,month,intent='antimeta'){const rs=team.map(role),all=new Set(rs.flatMap(r=>[...r])),mons=team.map(n=>DATA.dex[n]);const risks=weaknesses(team);let total=0;
  const used=new Set();for(const [i,n] of team.entries()){const r=rs[i],p=mons[i],u=usage(n,reg,month);total+=u===null?1.5:Math.log1p(u)*1.8;
  if(r.has('pivot')&&!used.has('pivot'))total+=5;if(r.has('fakeout')&&!used.has('fakeout'))total+=3;if(r.has('tailwind')&&!used.has('tailwind'))total+=5;
  if(r.has('redirect')&&!used.has('redirect'))total+=3;if(r.has('special')&&!used.has('special'))total+=4;if(r.has('physical')&&!used.has('physical'))total+=4;if(r.has('priority')&&!used.has('priority'))total+=2;
@@ -289,9 +357,19 @@ function teamScore(team,anchor,mode,reg,month){const rs=team.map(role),all=new S
  const kinds=team.map(n=>DATA.dex[n]?.types?.[0]);for(const t of new Set(kinds)){const k=kinds.filter(x=>x===t).length;if(k>=3)total-=(k-2)*4;}
  if(team.filter(n=>role(n).has('physical')).length===0||team.filter(n=>role(n).has('special')).length===0)total-=9;
  if(reg==='mc')total+=tournamentCoreFit(team);
+ total+=anchoredMetaValue(team,anchor,intent,reg,month);
  return total;}
-function baseCore(mode,anchor,reg,rand){const pick=(options,chosen)=>{let opts=options.filter(n=>n!==anchor&&!chosen.includes(n)&&exists(n,reg)&&BUILDS[n]&&![anchor,...chosen].some(x=>RULES.baseName(x)===RULES.baseName(n))&&(!RULES.isMega(n)||[anchor,...chosen].filter(x=>RULES.isMega(x)).length<2));return opts.length?opts[Math.floor(rand()*opts.length)]:null};let seed=[];
+function baseCore(mode,anchor,reg,rand,intent='antimeta'){const pick=(options,chosen)=>{let opts=options.filter(n=>n!==anchor&&!chosen.includes(n)&&exists(n,reg)&&BUILDS[n]&&![anchor,...chosen].some(x=>RULES.baseName(x)===RULES.baseName(n))&&(!RULES.isMega(n)||[anchor,...chosen].filter(x=>RULES.isMega(x)).length<2));return opts.length?opts[Math.floor(rand()*opts.length)]:null};let seed=[];
  const add=(candidates)=>{const n=pick(candidates,seed);if(n)seed.push(n)};
+ if(intent==='antimeta'&&anchor==='Alcremie'){
+   // The setup plan MUST bring Steel/Dark answers and buy safe turns.
+   add(['Incineroar','Arcanine-Hisui']);
+   add(['Armarouge','Delphox-Mega','Sinistcha']);
+ }
+ if(intent==='antimeta'&&anchor==='Dedenne'){
+   add(['Incineroar','Rillaboom']);
+   add(['Salamence-Mega','Golisopod-Mega']);
+ }
  if(mode==='rain'){if(!role(anchor).has('rainsetter'))add(['Pelipper','Politoed']);if(!role(anchor).has('rainabuser'))add(['Archaludon','Basculegion','Swampert-Mega']);}
  if(mode==='trickroom'){add(['Farigiraf','Hatterene','Sinistcha']);add(['Torkoal','Golisopod-Mega','Armarouge','Kingambit']);}
  if(mode==='sand'){if(!role(anchor).has('sandsetter'))add(['Tyranitar','Tyranitar-Mega']);if(!role(anchor).has('ground'))add(['Excadrill-Mega','Excadrill','Garchomp']);}
@@ -300,9 +378,9 @@ function baseCore(mode,anchor,reg,rand){const pick=(options,chosen)=>{let opts=o
  if(mode==='hyper'){add(['Sneasler','Raichu-Mega-Y','Raichu-Mega-X']);add(['Whimsicott','Talonflame','Salamence-Mega']);}
  if(mode==='balanced'){add(['Incineroar','Milotic','Rillaboom']);add(['Whimsicott','Farigiraf','Talonflame']);}
  return seed;}
-function generate(anchor,mode='balanced',reg='mc',month='2026-09',seed=1,exclude=[]){if(!RULES.isLegal(anchor,reg))throw Error(anchor+' non è ammesso in Regulation '+reg.toUpperCase());if(mode==='psyspam'&&['Rillaboom','Raichu-Mega-X'].includes(anchor))throw Error('Il fulcro genera un terreno incompatibile con Psychic Terrain. Scegli un piano compatibile.');if(mode==='rain'&&['Charizard-Mega-Y','Torkoal'].includes(anchor))throw Error('Il fulcro attiva il sole, incompatibile con Rain. Scegli un piano diverso.');if(mode==='sun'&&['Pelipper','Politoed','Tyranitar'].includes(anchor))throw Error('Il fulcro imposta meteo incompatibile col sole.');if(mode==='sand'&&['Pelipper','Politoed'].includes(anchor))throw Error('Il fulcro attiva la pioggia, incompatibile con Sand. Scegli un piano diverso.');if(!DATA.dex[anchor])throw Error('Mancano i dati di '+anchor+'. Seleziona una specie dal catalogo o recuperala tramite PokéAPI.');if(mode!=='rain'&&['Basculegion','Archaludon'].includes(anchor))throw Error('Il set proposto per '+anchor+' si basa sulla pioggia: scegli Rain oppure prepara un set alternativo manualmente.');
+function generate(anchor,mode='balanced',reg='mc',month='2026-09',seed=1,exclude=[],intent='antimeta'){if(!RULES.isLegal(anchor,reg))throw Error(anchor+' non è ammesso in Regulation '+reg.toUpperCase());if(mode==='psyspam'&&['Rillaboom','Raichu-Mega-X'].includes(anchor))throw Error('Il fulcro genera un terreno incompatibile con Psychic Terrain. Scegli un piano compatibile.');if(mode==='rain'&&['Charizard-Mega-Y','Torkoal'].includes(anchor))throw Error('Il fulcro attiva il sole, incompatibile con Rain. Scegli un piano diverso.');if(mode==='sun'&&['Pelipper','Politoed','Tyranitar'].includes(anchor))throw Error('Il fulcro imposta meteo incompatibile col sole.');if(mode==='sand'&&['Pelipper','Politoed'].includes(anchor))throw Error('Il fulcro attiva la pioggia, incompatibile con Sand. Scegli un piano diverso.');if(!DATA.dex[anchor])throw Error('Mancano i dati di '+anchor+'. Seleziona una specie dal catalogo o recuperala tramite PokéAPI.');if(mode!=='rain'&&['Basculegion','Archaludon'].includes(anchor))throw Error('Il set proposto per '+anchor+' si basa sulla pioggia: scegli Rain oppure prepara un set alternativo manualmente.');
  const random=seedRand(seed);const available=Object.keys(DATA.dex).filter(n=>exists(n,reg)&&(Boolean(BUILDS[n])||n===anchor));if(!available.includes(anchor))throw Error('Fulcro non incluso nel roster.');const prior=new Set(exclude);let selected=null;let best=-Infinity;
- for(let iteration=0;iteration<120;iteration++){let rand=seedRand(Math.floor(random()*2**32));let team=[anchor,...baseCore(mode,anchor,reg,rand)];
+ for(let iteration=0;iteration<120;iteration++){let rand=seedRand(Math.floor(random()*2**32));let team=[anchor,...baseCore(mode,anchor,reg,rand,intent)];
  const megaChoices={
  balanced:['Salamence-Mega','Metagross-Mega','Gardevoir-Mega','Golisopod-Mega','Excadrill-Mega','Baxcalibur-Mega','Delphox-Mega'],
  hyper:['Salamence-Mega','Gardevoir-Mega','Metagross-Mega','Raichu-Mega-X','Excadrill-Mega','Delphox-Mega'],
@@ -332,11 +410,12 @@ function generate(anchor,mode='balanced',reg='mc',month='2026-09',seed=1,exclude
  s-=after.reduce((v,x,i)=>v+Math.max(0,x.weak-2)*3-Math.max(0,before[i]?.weak-2)*1.3,0);
  for(const t of TYPES){if(effectiveness(t,DATA.dex[anchor].types)>1&&effectiveness(t,DATA.dex[n].types)<1)s+=1.8;}
  s+=(rand()-.5)*9;return [n,s];}).sort((a,b)=>b[1]-a[1]);team.push(rated[Math.floor(rand()*Math.min(4,rated.length))][0]);}
- if(!isLegalTeam(team,reg))continue;if(team.filter(n=>RULES.isMega(n)).length<2)continue;if(team.includes('Raichu-Mega-X')&&(team.includes('Rillaboom')||team.includes('Indeedee-F')))continue;if(team.includes('Rillaboom')&&team.includes('Indeedee-F'))continue;const teamRoles=new Set(team.flatMap(n=>[...role(n)]));if(mode==='sun'&&(!teamRoles.has('sunsetter')||!teamRoles.has('sunabuser')))continue;if(mode==='rain'&&(!teamRoles.has('rainsetter')||!teamRoles.has('rainabuser')))continue;if(mode==='sand'&&(!teamRoles.has('sandsetter')||!teamRoles.has('ground')))continue;if(mode==='psyspam'&&(!teamRoles.has('terrain')||!teamRoles.has('terrainabuser')))continue;let score=teamScore(team,anchor,mode,reg,month)+(rand()-.5)*9;const signature=team.slice().sort().join('!');if(prior.has(signature))score-=500;if(score>best){best=score;selected={members:team,key:signature,score:Number(score.toFixed(1)),mode,anchor,reg,month};}}
+ if(!isLegalTeam(team,reg))continue;if(team.filter(n=>RULES.isMega(n)).length<2)continue;if(team.includes('Raichu-Mega-X')&&(team.includes('Rillaboom')||team.includes('Indeedee-F')))continue;if(team.includes('Rillaboom')&&team.includes('Indeedee-F'))continue;const teamRoles=new Set(team.flatMap(n=>[...role(n)]));if(mode==='sun'&&(!teamRoles.has('sunsetter')||!teamRoles.has('sunabuser')))continue;if(mode==='rain'&&(!teamRoles.has('rainsetter')||!teamRoles.has('rainabuser')))continue;if(mode==='sand'&&(!teamRoles.has('sandsetter')||!teamRoles.has('ground')))continue;if(mode==='psyspam'&&(!teamRoles.has('terrain')||!teamRoles.has('terrainabuser')))continue;let score=teamScore(team,anchor,mode,reg,month,intent)+(rand()-.5)*9;const signature=team.slice().sort().join('!');if(prior.has(signature))score-=500;if(score>best){best=score;selected={members:team,key:signature,score:Number(score.toFixed(1)),mode,anchor,reg,month};}}
  if(!selected)throw Error('Non è stato possibile costruire un team legale.');
  selected.risks=weaknesses(selected.members).filter(x=>x.weak>=3).slice(0,5);
  selected.lead=[anchor, selected.members.slice(1).find(x=>['fakeout','tailwind','redirect'].some(r=>role(x).has(r)))||selected.members[1]];
  selected.reasons=selected.members.map((n,i)=>explain(n,anchor,mode,i));
+ selected.intent=intent;selected.surprisePlan=metaSurprisePlan(anchor,selected.members,mode,reg,month,intent);
  selected.profile=profiles[mode];selected.megaPlan='Due Mega alternative nella stessa squadra: puoi usarne una sola per battaglia, scegliendola in base al matchup.';return selected;}
 function explain(n,anchor,mode,index){if(!index&&n==='Dedenne')return 'Fulcro off-meta da adattare al team: il sito confronta diversi strumenti, mosse di supporto e minacce Ground, spiegando la scelta e i relativi compromessi.';if(!index)return 'Fulcro della squadra: gli altri cinque slot devono proteggerlo e creare occasioni di attacco.';const r=role(n),p=DATA.dex[n],a=DATA.dex[anchor];const best=TYPES.filter(t=>effectiveness(t,a.types)>=2&&effectiveness(t,p.types)<1);let v=[];if(best.length)v.push('switch più sicuro contro '+best.slice(0,2).join(' / '));if(r.has('fakeout'))v.push('Fake Out per gestire il primo turno');if(r.has('tailwind'))v.push('controllo Speed con Tailwind');if(r.has('trickroom'))v.push('setta Trick Room');if(r.has('rainsetter'))v.push('attiva la pioggia');if(r.has('rainabuser')&&mode==='rain')v.push('pressione offensiva sotto pioggia');if(r.has('sandsetter'))v.push('attiva la sabbia');if(r.has('sunsetter'))v.push('attiva il sole');if(r.has('sunabuser')&&mode==='sun')v.push('sfrutta il sole');if(r.has('terrain'))v.push('supporto di Psychic Terrain');if(r.has('terrainabuser'))v.push('sfrutta Expanding Force');if(r.has('pivot'))v.push('pivot per riposizionare il core');if(r.has('intimidate'))v.push('riduce la pressione fisica');if(r.has('redirect'))v.push('protegge il partner con redirection');if(r.has('slow')&&mode==='trickroom')v.push('attaccante adatto a Trick Room');if(r.has('priority'))v.push('pressione con priorità');if(!v.length)v.push('copertura '+(p?.types||[]).join('/')+' e profilo '+(r.has('special')?'speciale':'fisico'));return v.slice(0,2).join(' · ')+'.';}
 // Automatic playstyle ranking: heuristics based on lead role, typing and speed, not tournament win-rate estimates.
@@ -349,6 +428,7 @@ function styleFit(anchor,reg='mc',month='2026-09'){
  const why={balanced:'Flessibilità, coperture difensive e gestione della Speed',hyper:'Pressione immediata, supporto di velocità e priorità',rain:'Controllo del meteo, attaccanti Acqua ed Electro Shot',sand:'Pressione Ground/Steel con Tyranitar e chip della sabbia',sun:'Attacchi Fuoco potenziati e contrasto alla pioggia',trickroom:'Setter e attaccanti lenti che anticipano i Pokémon veloci',psyspam:'Psychic Terrain e attacchi Psychic di area'};
  if(fast)fits.hyper+=24;else if(speed>=85)fits.hyper+=10;else fits.hyper-=9;
  if(slow)fits.trickroom+=24;else if(speed>=95)fits.trickroom-=23;
+ if(anchor==='Alcremie'){fits.balanced+=35;fits.trickroom-=10;why.balanced='Setup Calm Mind + Stored Power con Fake Out, switch sicuri e risposte agli Steel/Dark; Trick Room dura pochi turni rispetto al setup.';}
  if(types.includes('Water'))fits.rain+=24;
  if(types.includes('Electric'))fits.rain+=14;
  if(types.includes('Ground')||types.includes('Rock')||types.includes('Steel'))fits.sand+=19;
@@ -1188,7 +1268,7 @@ function buildSets(team,mode,reg='mc',month='2026-09',intent='antimeta'){
 function statValue(base,sp,stat,nature='neutral'){const pts=Math.max(0,Math.min(32,Number(sp)||0));if(stat==='hp')return base+75+pts;return Math.floor((base+20+pts)*(nature==='plus'?1.1:nature==='minus'?.9:1));}
 function damage(attacker,defender,move,{offSP=32,defSP=0,hpSP=0,offNature='plus',defNature='neutral',boost=1}={}){const a=DATA.dex[attacker],d=DATA.dex[defender],m=MOVES[move];if(!a||!d||!m)return null;const [type,power,category]=m;const physical=category==='physical',A=statValue(a.stats[physical?1:3],offSP,'off',offNature),D=statValue(d.stats[physical?2:4],defSP,'def',defNature),hp=statValue(d.stats[0],hpSP,'hp');const eff=effectiveness(type,d.types),stab=a.types.includes(type)?1.5:1;const base=Math.floor(Math.floor(22*power*A/D)/50)+2;const max=Math.floor(base*stab*eff*boost),min=Math.floor(max*.85);return{min,max,hp,percentMin:+(100*min/hp).toFixed(1),percentMax:+(100*max/hp).toFixed(1),eff};}
 function optimizeBulk(defender,attacker,move,{offSP=32,chip=0,offNature='plus',fixedSP=0}={}){let best=null;for(let hp=0;hp<=32;hp++)for(let def=0;def<=32;def++){if(hp+def+fixedSP>66)continue;const d=damage(attacker,defender,move,{offSP,defSP:def,hpSP:hp,offNature});if(!d)continue;const remaining=Math.floor(d.hp*(1-chip/100));if(d.max<remaining&&(!best||hp+def<best.hpSP+best.defSP||(hp+def===best.hpSP+best.defSP&&d.hp-d.max>best.margin)))best={...d,hpSP:hp,defSP:def,margin:d.hp-d.max};}return best;}
-const core={DATA,RULES,TYPES,profiles,periods,role,usage,weaknesses,generate,isLegalTeam,effectiveness,statValue,damage,optimizeBulk,MOVES,MOVESETS,styleFit,suggestSet,buildSets,optimizeSetSP:allocateSetSP,MC_META_EVIDENCE,metaTournamentUsage,tournamentCoreFit,strategyAudit,isChampionItem,threatMatrix,CHAMPIONS_VERIFIED,inferredTags,synthesizeSet,chooseArchetype,applyArchetype};root.SCOUT_CORE=core;if(typeof module!=='undefined'&&module.exports)module.exports=core;
+const core={DATA,RULES,TYPES,profiles,periods,role,usage,weaknesses,generate,isLegalTeam,effectiveness,statValue,damage,optimizeBulk,MOVES,MOVESETS,styleFit,suggestSet,buildSets,optimizeSetSP:allocateSetSP,MC_META_EVIDENCE,metaTournamentUsage,tournamentCoreFit,strategyAudit,isChampionItem,threatMatrix,CHAMPIONS_VERIFIED,inferredTags,synthesizeSet,chooseArchetype,applyArchetype,metaSurprisePlan,ANTIMETA_BLUEPRINTS};root.SCOUT_CORE=core;if(typeof module!=='undefined'&&module.exports)module.exports=core;
 })(typeof window!=='undefined'?window:globalThis);
 </script><script>/* VGC SCOUT — new UI built around the independent strategy engine. */
 (()=>{'use strict';const C=window.SCOUT_CORE,$=s=>document.querySelector(s),E=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
