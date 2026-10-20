@@ -376,11 +376,16 @@ function referenceDamage(name,sp,nature,hit,item='',mode='balanced'){
  const atk=statValue(a.stats[physical?1:3],32,'off',offenseNature);
  let defense=statValue(d.stats[physical?2:4],sp[physical?2:4],'def',natureEffect(nature,physical?2:4));
  if(item==='Assault Vest'&&!physical)defense=Math.floor(defense*1.5);
- const hp=statValue(d.stats[0],sp[0],'hp'),stab=a.types.includes(m[0])?1.5:1,eff=effectiveness(m[0],d.types);
+ const hp=statValue(d.stats[0],sp[0],'hp');
+ const moveType=attacker==='Salamence-Mega'&&move==='Hyper Voice'?'Flying':m[0];
+ const stab=a.types.includes(moveType)?1.5:1,eff=effectiveness(moveType,d.types);
  const damageBase=Math.floor(Math.floor(22*m[1]*atk/Math.max(1,defense)/50)+2);
  // Doubles spread penalty when two targets are present.
  let max=Math.floor(damageBase*stab*eff);
  if(SPREAD_MOVES.has(move))max=Math.floor(max*.75);
+ if(attacker==='Salamence-Mega'&&move==='Hyper Voice')max=Math.floor(max*1.2); // Aerilate
+ if(attacker==='Golisopod-Mega'&&['Leech Life','Liquidation','Iron Head','First Impression','Close Combat','Drill Run'].includes(move))max=Math.floor(max*1.3); // Tough Claws, contact
+ if(moveType==='Ground'&&['Garchomp-Mega-Z','Rotom-Wash','Delphox-Mega'].includes(name))max=0; // Levitate
  // Drought from the attacking Pokemon applies when it enters, regardless of our team plan.
  const attackingSun=['Torkoal','Charizard-Mega-Y'].includes(attacker);
  if(m[0]==='Fire'&&(attackingSun||mode==='sun'))max=Math.floor(max*1.5);
@@ -527,7 +532,15 @@ function speedCandidates(set,mode,team,reg,month){
   const stat=speedNumber(set.name,sp,set.nature);let gain=0,hit=null,priority=-Infinity;
   for(const ref of refs)for(const mod of modifiers){
    if(speed0*mod.mult<=ref.stat&&stat*mod.mult>ref.stat){
-    const g=mod.weight*(.6+Math.min(3.2,Math.log1p(ref.usage||0)));
+    const availableActions=set.moves.filter(m=>MOVES[m]&&MOVES[m][2]!=='status'&&
+      !['Aqua Jet','Sucker Punch','First Impression','Bullet Punch','Extreme Speed','Ice Shard','Shadow Sneak','Grassy Glide'].includes(m));
+    const canHit=availableActions.some(m=>effectiveness(MOVES[m][0],DATA.dex[ref.name].types)>0);
+    const targetedSupport=set.moves.some(m=>['Nuzzle','Eerie Impulse','Charm','Electroweb','Will-O-Wisp','Super Fang','Taunt','Spore','Encore'].includes(m)&&
+      (m!=='Nuzzle'||!DATA.dex[ref.name].types.includes('Ground')));
+    const relevant=canHit||targetedSupport;
+    const tournamentWeight=metaTournamentUsage(ref.name);
+    const g=mod.weight*(.6+Math.min(3.2,Math.log1p(ref.usage||0)))*
+      (relevant?1:.12)*(tournamentWeight>15?1.16:1);
     gain+=g;
     const need=Array.from({length:33},(_,i)=>i).find(i=>speedNumber(set.name,i,set.nature)*mod.mult>ref.stat);
     // Explain the particular threshold that justifies the LAST SP invested,
@@ -536,7 +549,13 @@ function speedCandidates(set,mode,team,reg,month){
     if(why>priority){priority=why;hit={...ref,word:mod.word,mult:mod.mult,need};}
    }
   }
-  return {sp,hit,gain,score:gain*(DATA.dex[set.name].stats[5]>=100?2.2:1.5)-sp*(DATA.dex[set.name].stats[5]<90?.26:.10)};
+  const baseSpeed=DATA.dex[set.name].stats[5];
+  const priorityCount=set.moves.filter(m=>['Sucker Punch','First Impression','Aqua Jet','Grassy Glide','Ice Shard','Bullet Punch','Extreme Speed','Shadow Sneak'].includes(m)).length;
+  const movesToBeat=set.moves.filter(m=>MOVES[m]&&MOVES[m][2]!=='status').length-priorityCount;
+  const slowPenalty=baseSpeed<65&&ctx.mult===1?sp*.65:0;
+  const priorityPenalty=priorityCount>0?sp*(movesToBeat>0?.08:.30):0;
+  return {sp,hit,gain,score:gain*(baseSpeed>=100?2.2:1.5)-
+     sp*(baseSpeed<90?.26:.10)-slowPenalty-priorityPenalty};
  });
  options.sort((a,b)=>b.score-a.score||a.sp-b.sp);
  return [...new Map([...options.slice(0,6),options.find(x=>x.sp===0),options.find(x=>x.sp===32)].filter(Boolean).map(x=>[x.sp,x])).values()];
