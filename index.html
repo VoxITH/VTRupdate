@@ -23,6 +23,7 @@ add('Pawmot',923,['Electric','Fighting'],[70,115,70,70,60,105]);
 add('Cinderace',815,['Fire'],[80,116,75,65,75,119]);
 add('Venusaur',3,['Grass','Poison'],[80,82,83,100,100,80]);
 add('Meowscarada',908,['Grass','Dark'],[76,110,70,81,70,123]);
+add('Dedenne',702,['Electric','Fairy'],[67,58,57,81,67,101]);
 add('Rhyperior',464,['Ground','Rock'],[115,140,130,55,55,40]);
 add('Kingambit',983,['Dark','Steel'],[100,135,120,60,85,50]);
 })();</script><script>/* Regulation rosters compiled from Champions official regulation announcements and
@@ -320,7 +321,7 @@ const core={DATA,RULES,TYPES,profiles,periods,role,usage,weaknesses,generate,isL
 const DB=C.DATA.dex;const validPeriods=C.periods;const latest={mc:'2026-09',mb:'2026-08',ma:'2026-06'};
 const old=(()=>{try{return JSON.parse(localStorage.getItem('vgc-scout-reboot')||'{}')}catch{return{}}})();
 const state={route:'architect',reg:'mc',month:'2026-09',anchor:'Raichu-Mega-X',mode:'auto',nonce:0,seen:{},build:null,team:Array(6).fill(null),editSlot:0,bulk:{attacker:'Rillaboom',move:'Wood Hammer',defender:0,chip:0,offSP:32},metaFilter:'',battle:null,...old};
-state.team=Array.isArray(state.team)?[...state.team.slice(0,6),...Array(Math.max(0,6-state.team.length)).fill(null)]:Array(6).fill(null);state.reg=validPeriods[state.reg]?state.reg:'mc';state.month=validPeriods[state.reg].includes(state.month)?state.month:latest[state.reg];state.route='architect';state.battle=null;if(state.schema!==5){state.schema=5;state.mode='auto';state.build=null;state.seen={};}state.autoSuggestions=-1;
+state.team=Array.isArray(state.team)?[...state.team.slice(0,6),...Array(Math.max(0,6-state.team.length)).fill(null)]:Array(6).fill(null);state.reg=validPeriods[state.reg]?state.reg:'mc';state.month=validPeriods[state.reg].includes(state.month)?state.month:latest[state.reg];state.route='architect';state.battle=null;if(state.schema!==6){state.schema=6;state.mode='auto';state.build=null;state.seen={};}state.autoSuggestions=-1;
 const save=()=>{try{const {battle,route,...s}=state;localStorage.setItem('vgc-scout-reboot',JSON.stringify(s))}catch{}};
 function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),3000)}
 const artwork=(n)=>{const p=DB[n];return p?.id?`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.id}.png`:''};
