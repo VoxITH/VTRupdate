@@ -255,8 +255,7 @@ function strategyAudit(team,sets,mode){
  for(const set of sets||[]){
    if(!isChampionItem(set.name,set.item))alerts.push(set.name+': strumento non attestato su Pokémon Champions ('+set.item+').');
  }
- if(team.filter(n=>RULES.isMega(n)).length===1)
-   alerts.push('Una sola Mega in squadra: possibile, ma valuta una seconda opzione per matchup diversi.');
+ // A single Mega is legal and not a strategic defect by itself.
  return alerts;
 }
 const TYPES=['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
@@ -532,7 +531,7 @@ function generate(anchor,mode='balanced',reg='mc',month='2026-09',seed=1,exclude
  if(rr.has('sunsetter')&&mode==='sun')s+=6;if(rr.has('sunabuser')&&mode==='sun')s+=5;if(rr.has('sunsetter')&&mode==='rain')s-=25;if(rr.has('rainsetter')&&mode==='sand')s-=18;
  s-=after.reduce((v,x,i)=>v+Math.max(0,x.weak-2)*3-Math.max(0,before[i]?.weak-2)*1.3,0);
  for(const t of TYPES){if(effectiveness(t,DATA.dex[anchor].types)>1&&effectiveness(t,DATA.dex[n].types)<1)s+=1.8;}
- s+=(rand()-.5)*10;return [n,s];}).sort((a,b)=>b[1]-a[1]);team.push(rated[Math.floor(rand()*Math.min(5,rated.length))][0]);}
+ s+=(rand()-.5)*10;return [n,s];}).sort((a,b)=>b[1]-a[1]);const viable=rated.filter(x=>x[1]>=rated[0][1]-7).slice(0,5);team.push(viable[Math.floor(rand()*viable.length)][0]);}
  if(!isLegalTeam(team,reg))continue;if(team.includes('Raichu-Mega-X')&&(team.includes('Rillaboom')||team.includes('Indeedee-F')))continue;if(team.includes('Rillaboom')&&team.includes('Indeedee-F'))continue;const teamRoles=new Set(team.flatMap(n=>[...role(n)]));if(mode==='sun'&&(!teamRoles.has('sunsetter')||!teamRoles.has('sunabuser')))continue;if(mode==='rain'&&(!teamRoles.has('rainsetter')||!teamRoles.has('rainabuser')))continue;if(mode==='sand'&&(!teamRoles.has('sandsetter')||!teamRoles.has('ground')))continue;if(mode==='psyspam'&&(!teamRoles.has('terrain')||!teamRoles.has('terrainabuser')))continue;const rawScore=teamScore(team,anchor,mode,reg,month,intent);
  const score=rawScore-recentCorePenalty(team,history)+(rand()-.5)*11;
  const signature=team.slice().sort().join('!');
@@ -542,7 +541,7 @@ function generate(anchor,mode='balanced',reg='mc',month='2026-09',seed=1,exclude
  selected.lead=[anchor, selected.members.slice(1).find(x=>['fakeout','tailwind','redirect'].some(r=>role(x).has(r)))||selected.members[1]];
  selected.reasons=selected.members.map((n,i)=>explain(n,anchor,mode,i));
  selected.intent=intent;selected.surprisePlan=metaSurprisePlan(anchor,selected.members,mode,reg,month,intent);
- selected.profile=profiles[mode];selected.megaPlan='Due Mega alternative nella stessa squadra: puoi usarne una sola per battaglia, scegliendola in base al matchup.';return selected;}
+ selected.profile=profiles[mode];selected.megaPlan=selected.members.filter(n=>RULES.isMega(n)).length===2?'Due Mega alternative: in battaglia ne puoi usare una sola, scegli in base al matchup.':'Una Mega principale: gli altri slot sono stati assegnati a ruoli utili invece di imporre una seconda Mega.';return selected;}
 function explain(n,anchor,mode,index){if(!index&&n==='Dedenne')return 'Fulcro off-meta da adattare al team: il sito confronta diversi strumenti, mosse di supporto e minacce Ground, spiegando la scelta e i relativi compromessi.';if(!index)return 'Fulcro della squadra: gli altri cinque slot devono proteggerlo e creare occasioni di attacco.';const r=role(n),p=DATA.dex[n],a=DATA.dex[anchor];const best=TYPES.filter(t=>effectiveness(t,a.types)>=2&&effectiveness(t,p.types)<1);let v=[];if(best.length)v.push('switch più sicuro contro '+best.slice(0,2).join(' / '));if(r.has('fakeout'))v.push('Fake Out per gestire il primo turno');if(r.has('tailwind'))v.push('controllo Speed con Tailwind');if(r.has('trickroom'))v.push('setta Trick Room');if(r.has('rainsetter'))v.push('attiva la pioggia');if(r.has('rainabuser')&&mode==='rain')v.push('pressione offensiva sotto pioggia');if(r.has('sandsetter'))v.push('attiva la sabbia');if(r.has('sunsetter'))v.push('attiva il sole');if(r.has('sunabuser')&&mode==='sun')v.push('sfrutta il sole');if(r.has('terrain'))v.push('supporto di Psychic Terrain');if(r.has('terrainabuser'))v.push('sfrutta Expanding Force');if(r.has('pivot'))v.push('pivot per riposizionare il core');if(r.has('intimidate'))v.push('riduce la pressione fisica');if(r.has('redirect'))v.push('protegge il partner con redirection');if(r.has('slow')&&mode==='trickroom')v.push('attaccante adatto a Trick Room');if(r.has('priority'))v.push('pressione con priorità');if(!v.length)v.push('copertura '+(p?.types||[]).join('/')+' e profilo '+(r.has('special')?'speciale':'fisico'));return v.slice(0,2).join(' · ')+'.';}
 // Automatic playstyle ranking: heuristics based on lead role, typing and speed, not tournament win-rate estimates.
 const styleOrder=['balanced','rain','hyper','sand','sun','trickroom','psyspam'];
