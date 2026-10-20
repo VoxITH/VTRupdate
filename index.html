@@ -55,6 +55,77 @@ return {isLegal,isMega,baseName,mega,base,source:'https://bulbapedia.bulbagarden
 </script><script>/* VGC SCOUT REBOOT — pure strategy engine, no external AI dependency. */
 (function(root){'use strict';
 const DATA=root.VGC_DATA||{meta:{},dex:{}}, RULES=root.VGC_RULES||{isLegal:()=>false,isMega:()=>false};
+
+/* Snapshot torneistico Pick Four: 928 Top 8 su 116 tornei, aggiornato 5 ottobre 2026.
+   NON percentuali sulla ladder, NON win rate predittivi. */
+const MC_META_EVIDENCE={
+ updated:'2026-10-05',sample:928,events:116,scope:'Top 8 su eventi M-C (12 settembre–5 ottobre 2026)',
+ sources:[
+  {name:'Pick Four: risultati e core dei tornei',url:'https://pickfour.win/events',type:'Statistica aggregata'},
+  {name:'Victory Road: replica teams M-C',url:'https://victoryroad.pro/champions-replica/',type:'Squadre da torneo'},
+  {name:'Victory Road: October Challenge #1',url:'https://victoryroad.pro/vr-oct26/',type:'Torneo 384 partecipanti'},
+  {name:'Smogon: usage settembre 1500+',url:'https://www.smogon.com/stats/2026-09/',type:'Ladder, non torneo'},
+  {name:'Reddit r/VGC: discussione M-C',url:'https://www.reddit.com/r/VGC/comments/1wbaus8/',type:'Esperienze comunitarie'},
+  {name:'Reddit r/VGC: evoluzione del meta',url:'https://www.reddit.com/r/VGC/comments/1x1u2ls/',type:'Discussione 9 ottobre'},
+  {name:'Serebii: strumenti Champions',url:'https://www.serebii.net/pokemonchampions/items.shtml',type:'Elenco oggetti'},
+  {name:'Regolamento ufficiale M-C',url:'https://champions-news.pokemon-home.com/en/page/816.html',type:'Regolamento'}
+ ],
+ top:[
+  ['Rillaboom',56.4],['Incineroar',37],['Sneasler',36.9],['Gholdengo',26.9],
+  ['Raichu-Mega-Y',25.6],['Salamence-Mega',22.2],['Kingambit',21.4],
+  ['Garchomp-Mega-Z',17],['Arcanine-Hisui',15.8],['Farigiraf',15.7],
+  ['Archaludon',14.7],['Indeedee-F',13],['Milotic',12.9],['Charizard-Mega-Y',12.6],
+  ['Volcarona',12.5],['Basculegion',11],['Golisopod-Mega',10.1],['Pelipper',10]
+ ],
+ pairs:[
+  ['Incineroar','Rillaboom',27.2],['Gholdengo','Rillaboom',24.1],
+  ['Raichu-Mega-Y','Rillaboom',23],['Rillaboom','Sneasler',21.4],
+  ['Gholdengo','Raichu-Mega-Y',16.9],['Rillaboom','Salamence-Mega',15],
+  ['Salamence-Mega','Sneasler',13.9],['Incineroar','Sneasler',13.7]
+ ],
+ observations:[
+  {title:'Terreni e priorità',text:'Rillaboom e Indeedee cambiano il valore di Fake Out, Grassy Glide e Psyspam. Il terreno attivo va confermato turno per turno.',weight:'evidenza forte',source:5},
+  {title:'Mega Raichu Y / Garchomp Z',text:'Doppia opzione Mega che ricorre nei migliori risultati. Valutare matchup con sole/pioggia e la Speed di Garchomp con Choice Scarf.',weight:'evidenza torneo + discussione',source:1},
+  {title:'Mega Salamence',text:'Aerilate + Hyper Voice e controllo Tailwind rendono Salamence particolarmente utile contro Rillaboom/Sneasler, secondo gli analisti.',weight:'discussione qualificata',source:5},
+  {title:'Golisopod-Mega',text:'Tough Claws, Leech Life, priorità e bassa Speed: non investire automaticamente 32 SP in Speed. Preferire bulk/Trick Room se i matchup lo giustificano.',weight:'interpretazione strategica',source:4},
+  {title:'Pioggia e Sand',text:'Basculegion con Swift Swim necessita di Rain attiva. Excadrill Mega non conserva Sand Rush; verificare lo scenario meteo prima di attribuire vantaggi di Speed.',weight:'meccaniche verificabili',source:4}
+ ]
+};
+function metaTournamentUsage(n){
+ const hit=MC_META_EVIDENCE.top.find(x=>x[0]===n);
+ return hit?hit[1]:0;
+}
+function tournamentCoreFit(team){
+ let score=0;
+ for(const [a,b,pct] of MC_META_EVIDENCE.pairs){
+   if(team.includes(a)&&team.includes(b))score+=Math.log1p(pct)*1.6;
+ }
+ return score;
+}
+function strategyAudit(team,sets,mode){
+ const alerts=[];
+ const has=(roleName)=>team.some(n=>role(n).has(roleName));
+ if(team.includes('Basculegion')&&!has('rainsetter'))
+   alerts.push('Basculegion: Swift Swim non si attiva senza pioggia. Serve un setter o un set alternativo.');
+ if(team.includes('Archaludon')&&!has('rainsetter'))
+   alerts.push('Archaludon: Electro Shot ha bisogno di Rain per essere immediata.');
+ if(team.includes('Sneasler')&&sets?.some(x=>x.name==='Sneasler'&&x.item==='Grassy Seed')&&!team.includes('Rillaboom'))
+   alerts.push('Grassy Seed su Sneasler: assente il setter di Grassy Terrain.');
+ if(team.includes('Indeedee-F')&&team.includes('Rillaboom'))
+   alerts.push('Due setter di terreno: l’ordine degli ingressi decide quale terreno prevale.');
+ if(team.includes('Indeedee-F')&&team.includes('Raichu-Mega-X'))
+   alerts.push('Psychic Terrain ed Electric Terrain si sovrascrivono: pianifica i turni.');
+ if(mode==='trickroom'){
+  const sluggish=team.filter(n=>DATA.dex[n]?.stats?.[5]<=70).length;
+  if(sluggish<2)alerts.push('Trick Room: pochi attaccanti realmente lenti; servono due piani di Speed.');
+ }
+ for(const set of sets||[]){
+   if(!isChampionItem(set.name,set.item))alerts.push(set.name+': strumento non attestato su Pokémon Champions ('+set.item+').');
+ }
+ if(team.filter(n=>RULES.isMega(n)).length===1)
+   alerts.push('Una sola Mega in squadra: possibile, ma valuta una seconda opzione per matchup diversi.');
+ return alerts;
+}
 const TYPES=['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
 const TYPE_RULES={Normal:'Rock:.5 Steel:.5 Ghost:0',Fire:'Fire:.5 Water:.5 Grass:2 Ice:2 Bug:2 Rock:.5 Dragon:.5 Steel:2',Water:'Fire:2 Water:.5 Grass:.5 Ground:2 Rock:2 Dragon:.5',Electric:'Water:2 Electric:.5 Grass:.5 Ground:0 Flying:2 Dragon:.5',Grass:'Fire:.5 Water:2 Grass:.5 Poison:.5 Ground:2 Flying:.5 Bug:.5 Rock:2 Dragon:.5 Steel:.5',Ice:'Fire:.5 Water:.5 Grass:2 Ice:.5 Ground:2 Flying:2 Dragon:2 Steel:.5',Fighting:'Normal:2 Ice:2 Poison:.5 Flying:.5 Psychic:.5 Bug:.5 Rock:2 Ghost:0 Dark:2 Steel:2 Fairy:.5',Poison:'Grass:2 Poison:.5 Ground:.5 Rock:.5 Ghost:.5 Steel:0 Fairy:2',Ground:'Fire:2 Electric:2 Grass:.5 Poison:2 Flying:0 Bug:.5 Rock:2 Steel:2',Flying:'Electric:.5 Grass:2 Fighting:2 Bug:2 Rock:.5 Steel:.5',Psychic:'Fighting:2 Poison:2 Psychic:.5 Dark:0 Steel:.5',Bug:'Fire:.5 Grass:2 Fighting:.5 Poison:.5 Flying:.5 Psychic:2 Ghost:.5 Dark:2 Steel:.5 Fairy:.5',Rock:'Fire:2 Ice:2 Fighting:.5 Ground:.5 Flying:2 Bug:2 Steel:.5',Ghost:'Normal:0 Psychic:2 Ghost:2 Dark:.5',Dragon:'Steel:.5 Dragon:2 Fairy:0',Dark:'Fighting:.5 Psychic:2 Ghost:2 Dark:.5 Fairy:.5',Steel:'Fire:.5 Water:.5 Electric:.5 Ice:2 Rock:2 Steel:.5 Fairy:2',Fairy:'Fire:.5 Fighting:2 Poison:.5 Dragon:2 Dark:2 Steel:.5'};
 const CHART=Object.fromEntries(Object.entries(TYPE_RULES).map(([t,str])=>[t,Object.fromEntries(str.split(' ').map(x=>x.split(':')).map(([a,b])=>[a,Number(b)]))]));
@@ -93,6 +164,7 @@ function teamScore(team,anchor,mode,reg,month){const rs=team.map(role),all=new S
  if(mode==='psyspam'){if(all.has('terrain')&&all.has('terrainabuser'))total+=16;if(team.includes('Rillaboom')&&team.includes('Indeedee-F'))total-=35;}
  const kinds=team.map(n=>DATA.dex[n]?.types?.[0]);for(const t of new Set(kinds)){const k=kinds.filter(x=>x===t).length;if(k>=3)total-=(k-2)*4;}
  if(team.filter(n=>role(n).has('physical')).length===0||team.filter(n=>role(n).has('special')).length===0)total-=9;
+ if(reg==='mc')total+=tournamentCoreFit(team);
  return total;}
 function baseCore(mode,anchor,reg,rand){const pick=(options,chosen)=>{let opts=options.filter(n=>n!==anchor&&!chosen.includes(n)&&exists(n,reg)&&BUILDS[n]&&![anchor,...chosen].some(x=>RULES.baseName(x)===RULES.baseName(n))&&(!RULES.isMega(n)||[anchor,...chosen].filter(x=>RULES.isMega(x)).length<2));return opts.length?opts[Math.floor(rand()*opts.length)]:null};let seed=[];
  const add=(candidates)=>{const n=pick(candidates,seed);if(n)seed.push(n)};
@@ -178,28 +250,28 @@ const BUILDS={
 'Raichu-Mega-Y':['Lightning Rod → No Guard','Raichunite Y','Timid','Thunderbolt|Volt Switch|Fake Out|Protect'],
 'Excadrill-Mega':['Sand Rush → Piercing Drill','Excadrite','Jolly','High Horsepower|Iron Head|Rock Slide|Protect'],
 'Excadrill':['Sand Rush','Focus Sash','Jolly','High Horsepower|Iron Head|Rock Slide|Protect'],
-'Tyranitar':['Sand Stream','Clear Amulet','Adamant','Rock Slide|Knock Off|Low Kick|Protect'],
+'Tyranitar':['Sand Stream','Expert Belt','Adamant','Rock Slide|Knock Off|Low Kick|Protect'],
 'Tyranitar-Mega':['Sand Stream','Tyranitarite','Adamant','Rock Slide|Knock Off|Low Kick|Protect'],
 'Pelipper':['Drizzle','Focus Sash','Timid','Hurricane|Weather Ball|Tailwind|Wide Guard'],
 'Politoed':['Drizzle','Sitrus Berry','Calm','Scald|Icy Wind|Encore|Protect'],
 'Torkoal':['Drought','Charcoal','Quiet','Eruption|Heat Wave|Earth Power|Protect'],
 'Charizard-Mega-Y':['Drought','Charizardite Y','Modest','Heat Wave|Solar Beam|Weather Ball|Protect'],
-'Incineroar':['Intimidate','Safety Goggles','Careful','Fake Out|Flare Blitz|Knock Off|Parting Shot'],
-'Rillaboom':['Grassy Surge','Assault Vest','Adamant','Fake Out|Grassy Glide|Wood Hammer|U-turn'],
-'Whimsicott':['Prankster','Covert Cloak','Timid','Tailwind|Moonblast|Encore|Protect'],
+'Incineroar':['Intimidate','Sitrus Berry','Careful','Fake Out|Flare Blitz|Knock Off|Parting Shot'],
+'Rillaboom':['Grassy Surge','Miracle Seed','Adamant','Fake Out|Grassy Glide|Wood Hammer|U-turn'],
+'Whimsicott':['Prankster','Mental Herb','Timid','Tailwind|Moonblast|Encore|Protect'],
 'Farigiraf':['Armor Tail','Sitrus Berry','Quiet','Trick Room|Psychic|Helping Hand|Protect'],
 'Sinistcha':['Hospitality','Rocky Helmet','Relaxed','Matcha Gotcha|Rage Powder|Trick Room|Protect'],
 'Archaludon':['Stamina','Leftovers','Modest','Electro Shot|Dragon Pulse|Flash Cannon|Protect'],
 'Basculegion':['Swift Swim','Mystic Water','Adamant','Wave Crash|Aqua Jet|Last Respects|Protect'],
 'Sneasler':['Unburden','Grassy Seed','Jolly','Dire Claw|Close Combat|Acrobatics|Protect'],
 'Gholdengo':['Good as Gold','Life Orb','Modest','Make It Rain|Shadow Ball|Nasty Plot|Protect'],
-'Garchomp':['Rough Skin','Clear Amulet','Jolly','Stomping Tantrum|Dragon Claw|Rock Slide|Protect'],
+'Garchomp':['Rough Skin','Expert Belt','Jolly','Stomping Tantrum|Dragon Claw|Rock Slide|Protect'],
 'Indeedee-F':['Psychic Surge','Psychic Seed','Bold','Follow Me|Helping Hand|Psychic|Protect'],
 'Armarouge':['Flash Fire','Life Orb','Quiet','Expanding Force|Armor Cannon|Trick Room|Protect'],
-'Hatterene':['Magic Bounce','Covert Cloak','Quiet','Trick Room|Dazzling Gleam|Psychic|Protect'],
+'Hatterene':['Magic Bounce','Mental Herb','Quiet','Trick Room|Dazzling Gleam|Psychic|Protect'],
 'Volcarona':['Flame Body','Sitrus Berry','Timid','Heat Wave|Bug Buzz|Rage Powder|Protect'],
 'Rotom-Wash':['Levitate','Sitrus Berry','Modest','Hydro Pump|Thunderbolt|Will-O-Wisp|Protect'],
-'Corviknight':['Mirror Armor','Safety Goggles','Careful','Tailwind|Brave Bird|Roost|Protect'],
+'Corviknight':['Mirror Armor','Sitrus Berry','Careful','Tailwind|Brave Bird|Roost|Protect'],
 'Amoonguss':['Regenerator','Rocky Helmet','Sassy','Spore|Rage Powder|Pollen Puff|Protect'],
 'Kingambit':['Defiant','Black Glasses','Adamant','Kowtow Cleave|Iron Head|Sucker Punch|Protect'],
 'Maushold':['Friend Guard','Focus Sash','Jolly','Follow Me|Population Bomb|Taunt|Protect'],
@@ -209,34 +281,54 @@ const BUILDS={
 'Delphox-Mega':['Levitate','Delphoxite','Timid','Heat Wave|Psychic|Protect|Will-O-Wisp'],
 'Floette-Mega':['Fairy Aura','Floettite','Modest','Light of Ruin|Moonblast|Protect|Calm Mind'],
 'Gardevoir-Mega':['Pixilate','Gardevoirite','Timid','Dazzling Gleam|Psychic|Mystical Fire|Protect'],
-'Metagross':['Clear Body','Clear Amulet','Adamant','Meteor Mash|Zen Headbutt|Bullet Punch|Protect'],
+'Metagross':['Clear Body','Expert Belt','Adamant','Meteor Mash|Zen Headbutt|Bullet Punch|Protect'],
 'Greninja':['Protean','Focus Sash','Timid','Hydro Pump|Ice Beam|Dark Pulse|Protect'],
-'Baxcalibur':['Thermal Exchange','Clear Amulet','Adamant','Glaive Rush|Icicle Crash|Ice Shard|Protect'],
-'Talonflame':['Gale Wings','Covert Cloak','Jolly','Tailwind|Brave Bird|Will-O-Wisp|Protect'],
+'Baxcalibur':['Thermal Exchange','Expert Belt','Adamant','Glaive Rush|Icicle Crash|Ice Shard|Protect'],
+'Talonflame':['Gale Wings','Mental Herb','Jolly','Tailwind|Brave Bird|Will-O-Wisp|Protect'],
 'Dragonite':['Inner Focus','Lum Berry','Adamant','Extreme Speed|Dragon Claw|Tailwind|Protect'],
 'Gengar-Mega':['Shadow Tag','Gengarite','Timid','Shadow Ball|Sludge Bomb|Icy Wind|Protect'],
 'Milotic':['Competitive','Sitrus Berry','Calm','Scald|Ice Beam|Icy Wind|Protect'],
-'Sylveon':['Pixilate','Throat Spray','Modest','Hyper Voice|Moonblast|Protect|Helping Hand'],
+'Sylveon':['Pixilate','Normal Gem','Modest','Hyper Voice|Moonblast|Protect|Helping Hand'],
 'Absol-Mega':['Magic Bounce','Absolite','Jolly','Knock Off|Sucker Punch|Swords Dance|Protect'],
 'Golisopod':['Emergency Exit','Rocky Helmet','Adamant','Leech Life|First Impression|Liquidation|Protect'],
-'Salamence':['Intimidate','Clear Amulet','Jolly','Dragon Claw|Tailwind|Double-Edge|Protect'],
+'Salamence':['Intimidate','Expert Belt','Jolly','Dragon Claw|Tailwind|Double-Edge|Protect'],
 'Arcanine-Hisui':['Intimidate','Sitrus Berry','Adamant','Flare Blitz|Rock Slide|Extreme Speed|Protect'],
-'Baxcalibur':['Thermal Exchange','Clear Amulet','Adamant','Glaive Rush|Icicle Crash|Ice Shard|Protect'],
-'Toxtricity':['Punk Rock','Throat Spray','Modest','Overdrive|Sludge Bomb|Boomburst|Protect'],
-'Decidueye-Hisui':['Scrappy','Clear Amulet','Adamant','Triple Arrows|Leaf Blade|Close Combat|Protect'],
+'Baxcalibur':['Thermal Exchange','Expert Belt','Adamant','Glaive Rush|Icicle Crash|Ice Shard|Protect'],
+'Toxtricity':['Punk Rock','Normal Gem','Modest','Overdrive|Sludge Bomb|Boomburst|Protect'],
+'Decidueye-Hisui':['Scrappy','Expert Belt','Adamant','Triple Arrows|Leaf Blade|Close Combat|Protect'],
 'Pawmot':['Natural Cure','Focus Sash','Jolly','Fake Out|Close Combat|Double Shock|Protect'],
-'Rhyperior':['Solid Rock','Weakness Policy','Brave','High Horsepower|Rock Slide|Heavy Slam|Protect'],
+'Rhyperior':['Solid Rock','Sitrus Berry','Brave','High Horsepower|Rock Slide|Heavy Slam|Protect'],
 'Primarina':['Liquid Voice','Sitrus Berry','Modest','Hyper Voice|Moonblast|Haze|Protect'],
 'Ninetales-Alola':['Snow Warning','Light Clay','Timid','Aurora Veil|Blizzard|Icy Wind|Protect'],
-'Corviknight':['Mirror Armor','Safety Goggles','Careful','Tailwind|Brave Bird|Roost|Protect'],
-'Hatterene':['Magic Bounce','Covert Cloak','Quiet','Trick Room|Dazzling Gleam|Psychic|Protect'],
+'Corviknight':['Mirror Armor','Sitrus Berry','Careful','Tailwind|Brave Bird|Roost|Protect'],
+'Hatterene':['Magic Bounce','Mental Herb','Quiet','Trick Room|Dazzling Gleam|Psychic|Protect'],
 'Cinderace':['Libero','Focus Sash','Jolly','Pyro Ball|High Jump Kick|Sucker Punch|Protect'],
 'Meowscarada':['Protean','Focus Sash','Jolly','Flower Trick|Knock Off|U-turn|Protect']
 };
-const ITEM_ALTERNATIVES=['Sitrus Berry','Safety Goggles','Clear Amulet','Covert Cloak','Life Orb','Rocky Helmet','Leftovers','Assault Vest','Focus Sash','Eject Button','Expert Belt','Lum Berry','Choice Specs','Choice Scarf','Mystic Water','Black Glasses'];
+
+/* Fonte: Serebii Pokémon Champions items, consultata 20 ottobre 2026.
+   Berries + hold items actually listed for Champions; Mega Stones validated by form. */
+const CHAMPIONS_ITEMS=new Set([
+ 'Air Balloon','Big Root','Binding Band','Black Belt','Black Glasses','Bright Powder',
+ 'Charcoal','Choice Scarf','Damp Rock','Dragon Fang','Eject Button','Electric Seed',
+ 'Expert Belt','Fairy Feather','Focus Band','Focus Sash','Grassy Seed','Hard Stone',
+ 'Heat Rock','Icy Rock','Iron Ball',"King's Rock",'Leftovers','Life Orb','Light Ball',
+ 'Light Clay','Magnet','Mental Herb','Metal Coat','Metronome','Miracle Seed','Misty Seed',
+ 'Muscle Band','Mystic Water','Never-Melt Ice','Normal Gem','Poison Barb','Psychic Seed',
+ 'Quick Claw','Red Card','Rocky Helmet','Scope Lens','Sharp Beak','Shed Shell','Shell Bell',
+ 'Silk Scarf','Silver Powder','Smooth Rock','Soft Sand','Spell Tag','Terrain Extender',
+ 'Twisted Spoon','White Herb','Wide Lens','Wise Glasses','Zoom Lens',
+ 'Sitrus Berry','Shuca Berry','Lum Berry','Charti Berry','Babiri Berry','Rindo Berry',
+ 'Roseli Berry','Wacan Berry','Yache Berry','Tanga Berry','Payapa Berry',
+ 'Oran Berry','Pecha Berry','Persim Berry','Rawst Berry','Aspear Berry'
+]);
+const isChampionItem=(name,item)=>RULES.isMega(name)?
+  Boolean(item&&BUILDS[name]?.[1]===item):CHAMPIONS_ITEMS.has(item);
+const ITEM_ALTERNATIVES=['Sitrus Berry','Shuca Berry','Air Balloon','Mental Herb','Life Orb','Rocky Helmet','Leftovers','Focus Sash','Eject Button','Expert Belt','Lum Berry','Choice Scarf','Mystic Water','Black Glasses','Miracle Seed','Grassy Seed','Psychic Seed','White Herb'];
 function suggestSet(n,mode='balanced',usedItems=[],team=[]){
  const spec=BUILDS[n],r=role(n),p=DATA.dex[n]||{},fast=(p.stats?.[5]||70)>=90,slow=(p.stats?.[5]||70)<=65;
  let ability=spec?.[0]||'',item=spec?.[1]||'',nature=spec?.[2]||(r.has('special')?'Modest':'Adamant');
+ if(item&&!isChampionItem(n,item))item=RULES.isMega(n)?'':'Sitrus Berry';
  let moves=(spec?.[3]||MOVESETS[n]?.join('|')||'').split('|').filter(Boolean).slice(0,4);
  const curated=Boolean(spec||MOVESETS[n]);
  if(mode==='rain'&&n==='Raichu-Mega-X')moves=['Fake Out','Volt Tackle','Volt Switch','Rain Dance'];
@@ -580,7 +672,7 @@ const SMART_ITEM_POOL={
  'Tyranitar':['Clear Amulet','Assault Vest','Safety Goggles','Sitrus Berry'],
  'Rotom-Wash':['Sitrus Berry','Leftovers','Covert Cloak','Safety Goggles']
 };
-const SMART_FALLBACK=['Sitrus Berry','Shuca Berry','Air Balloon','Covert Cloak','Focus Sash','Safety Goggles','Clear Amulet','Eject Button','Rocky Helmet','Leftovers','Life Orb','Lum Berry','Expert Belt'];
+const SMART_FALLBACK=['Sitrus Berry','Shuca Berry','Air Balloon','Mental Herb','Focus Sash','Expert Belt','Eject Button','Rocky Helmet','Leftovers','Life Orb','Lum Berry','Miracle Seed','Black Glasses','White Herb','Mystic Water','Light Clay','Choice Scarf'];
 const STATUS_MOVES=new Set(['Protect','Tailwind','Trick Room','Will-O-Wisp','Helping Hand','Encore','Taunt','Rage Powder','Follow Me','Roost','Swords Dance','Nasty Plot','Rain Dance','Light Screen','Reflect','Charm','Eerie Impulse','Thunder Wave']);
 function teamSignals(name,team,mode){
  const mates=team.filter(x=>x!==name),r=role(name),p=DATA.dex[name];
@@ -618,7 +710,8 @@ function planDedenneMoves(team,mode){
 }
 function assessItem(set,item,team,mode){
  const n=set.name,c=teamSignals(n,team,mode),r=role(n),moves=set.moves;
- if(RULES.isMega(n))return item===set.item?{value:180,why:'Strumento obbligatorio per la Mega; seconda Mega alternativa in fase di preview.'}:null;
+ if(!isChampionItem(n,item))return null;
+ if(RULES.isMega(n))return item===set.item?{value:180,why:'Pietra Mega obbligatoria; seconda Mega alternativa in team preview.'}:null;
  if(item==='Assault Vest'&&moves.some(m=>STATUS_MOVES.has(m)))return null;
  if(item==='Grassy Seed'&&c.terrain!=='grassy')return null;
  if(item==='Psychic Seed'&&c.terrain!=='psychic')return null;
@@ -691,7 +784,7 @@ function buildSets(team,mode,reg='mc',month='2026-09'){
 function statValue(base,sp,stat,nature='neutral'){const pts=Math.max(0,Math.min(32,Number(sp)||0));if(stat==='hp')return base+75+pts;return Math.floor((base+20+pts)*(nature==='plus'?1.1:nature==='minus'?.9:1));}
 function damage(attacker,defender,move,{offSP=32,defSP=0,hpSP=0,offNature='plus',defNature='neutral',boost=1}={}){const a=DATA.dex[attacker],d=DATA.dex[defender],m=MOVES[move];if(!a||!d||!m)return null;const [type,power,category]=m;const physical=category==='physical',A=statValue(a.stats[physical?1:3],offSP,'off',offNature),D=statValue(d.stats[physical?2:4],defSP,'def',defNature),hp=statValue(d.stats[0],hpSP,'hp');const eff=effectiveness(type,d.types),stab=a.types.includes(type)?1.5:1;const base=Math.floor(Math.floor(22*power*A/D)/50)+2;const max=Math.floor(base*stab*eff*boost),min=Math.floor(max*.85);return{min,max,hp,percentMin:+(100*min/hp).toFixed(1),percentMax:+(100*max/hp).toFixed(1),eff};}
 function optimizeBulk(defender,attacker,move,{offSP=32,chip=0,offNature='plus',fixedSP=0}={}){let best=null;for(let hp=0;hp<=32;hp++)for(let def=0;def<=32;def++){if(hp+def+fixedSP>66)continue;const d=damage(attacker,defender,move,{offSP,defSP:def,hpSP:hp,offNature});if(!d)continue;const remaining=Math.floor(d.hp*(1-chip/100));if(d.max<remaining&&(!best||hp+def<best.hpSP+best.defSP||(hp+def===best.hpSP+best.defSP&&d.hp-d.max>best.margin)))best={...d,hpSP:hp,defSP:def,margin:d.hp-d.max};}return best;}
-const core={DATA,RULES,TYPES,profiles,periods,role,usage,weaknesses,generate,isLegalTeam,effectiveness,statValue,damage,optimizeBulk,MOVES,MOVESETS,styleFit,suggestSet,buildSets,optimizeSetSP:allocateSetSP};root.SCOUT_CORE=core;if(typeof module!=='undefined'&&module.exports)module.exports=core;
+const core={DATA,RULES,TYPES,profiles,periods,role,usage,weaknesses,generate,isLegalTeam,effectiveness,statValue,damage,optimizeBulk,MOVES,MOVESETS,styleFit,suggestSet,buildSets,optimizeSetSP:allocateSetSP,MC_META_EVIDENCE,metaTournamentUsage,tournamentCoreFit,strategyAudit,isChampionItem};root.SCOUT_CORE=core;if(typeof module!=='undefined'&&module.exports)module.exports=core;
 })(typeof window!=='undefined'?window:globalThis);
 </script><script>/* VGC SCOUT — new UI built around the independent strategy engine. */
 (()=>{'use strict';const C=window.SCOUT_CORE,$=s=>document.querySelector(s),E=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
