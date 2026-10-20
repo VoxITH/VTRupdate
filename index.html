@@ -443,7 +443,7 @@ function teamScore(team,anchor,mode,reg,month,intent='antimeta'){const rs=team.m
  if(reg==='mc')total+=tournamentCoreFit(team);
  total+=anchoredMetaValue(team,anchor,intent,reg,month);
  return total;}
-function baseCore(mode,anchor,reg,rand,intent='antimeta'){const pick=(options,chosen)=>{let opts=options.filter(n=>n!==anchor&&!chosen.includes(n)&&exists(n,reg)&&BUILDS[n]&&![anchor,...chosen].some(x=>RULES.baseName(x)===RULES.baseName(n))&&(!RULES.isMega(n)||[anchor,...chosen].filter(x=>RULES.isMega(x)).length<2));return opts.length?opts[Math.floor(rand()*opts.length)]:null};let seed=[];
+function baseCore(mode,anchor,reg,rand,intent='antimeta'){const pick=(options,chosen)=>{let opts=options.filter(n=>n!==anchor&&!chosen.includes(n)&&exists(n,reg)&&(BUILDS[n]||CHAMPIONS_VERIFIED[n]||DATA.learnsets[n])&&![anchor,...chosen].some(x=>RULES.baseName(x)===RULES.baseName(n))&&(!RULES.isMega(n)||[anchor,...chosen].filter(x=>RULES.isMega(x)).length<2));return opts.length?opts[Math.floor(rand()*opts.length)]:null};let seed=[];
  const add=(candidates)=>{const n=pick(candidates,seed);if(n)seed.push(n)};
  if(intent==='antimeta'&&anchor==='Alcremie'){
    // The setup plan MUST bring Steel/Dark answers and buy safe turns.
@@ -497,7 +497,7 @@ function recentCorePenalty(team,history){
  return worst;
 }
 function generate(anchor,mode='balanced',reg='mc',month='2026-09',seed=1,exclude=[],intent='antimeta'){if(!RULES.isLegal(anchor,reg))throw Error(anchor+' non è ammesso in Regulation '+reg.toUpperCase());if(mode==='psyspam'&&['Rillaboom','Raichu-Mega-X'].includes(anchor))throw Error('Il fulcro genera un terreno incompatibile con Psychic Terrain. Scegli un piano compatibile.');if(mode==='rain'&&['Charizard-Mega-Y','Torkoal'].includes(anchor))throw Error('Il fulcro attiva il sole, incompatibile con Rain. Scegli un piano diverso.');if(mode==='sun'&&['Pelipper','Politoed','Tyranitar'].includes(anchor))throw Error('Il fulcro imposta meteo incompatibile col sole.');if(mode==='sand'&&['Pelipper','Politoed'].includes(anchor))throw Error('Il fulcro attiva la pioggia, incompatibile con Sand. Scegli un piano diverso.');if(!DATA.dex[anchor])throw Error('Mancano i dati di '+anchor+'. Seleziona una specie dal catalogo o recuperala tramite PokéAPI.');if(mode!=='rain'&&['Basculegion','Archaludon'].includes(anchor))throw Error('Il set proposto per '+anchor+' si basa sulla pioggia: scegli Rain oppure prepara un set alternativo manualmente.');
- const random=seedRand(seed);const available=Object.keys(DATA.dex).filter(n=>exists(n,reg)&&(Boolean(BUILDS[n])||n===anchor));if(!available.includes(anchor))throw Error('Fulcro non incluso nel roster.');const history=Array.isArray(exclude)?exclude:[];let selected=null;let best=-Infinity;
+ const random=seedRand(seed);const available=Object.keys(DATA.dex).filter(n=>exists(n,reg)&&(n===anchor||Boolean(BUILDS[n])||(!RULES.isMega(n)&&Boolean(CHAMPIONS_VERIFIED[n]||DATA.learnsets[n]))));if(!available.includes(anchor))throw Error('Fulcro non incluso nel roster.');const history=Array.isArray(exclude)?exclude:[];let selected=null;let best=-Infinity;
  for(let iteration=0;iteration<220;iteration++){let rand=seedRand(Math.floor(random()*2**32));let team=[anchor,...baseCore(mode,anchor,reg,rand,intent)];
  const megaChoices={
  balanced:['Salamence-Mega','Metagross-Mega','Gardevoir-Mega','Golisopod-Mega','Excadrill-Mega','Baxcalibur-Mega','Delphox-Mega'],
