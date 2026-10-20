@@ -24,6 +24,7 @@ add('Cinderace',815,['Fire'],[80,116,75,65,75,119]);
 add('Venusaur',3,['Grass','Poison'],[80,82,83,100,100,80]);
 add('Meowscarada',908,['Grass','Dark'],[76,110,70,81,70,123]);
 add('Dedenne',702,['Electric','Fairy'],[67,58,57,81,67,101]);
+add('Simisage',512,['Grass'],[75,98,63,98,63,101]);
 add('Basculegion-F',902,['Water','Ghost'],[120,92,65,100,75,78]);
 add('Rhyperior',464,['Ground','Rock'],[115,140,130,55,55,40]);
 add('Kingambit',983,['Dark','Steel'],[100,135,120,60,85,50]);
@@ -239,7 +240,7 @@ const SPEC={
 const MOVESETS={
 'Dedenne':['Nuzzle','Super Fang','Helping Hand','Protect'],
 'Rillaboom':['Fake Out','Grassy Glide','Wood Hammer','U-turn'],'Sneasler':['Dire Claw','Close Combat','Acrobatics','Protect'],'Incineroar':['Fake Out','Flare Blitz','Knock Off','Parting Shot'],'Salamence-Mega':['Dragon Claw','Tailwind','Protect','Double-Edge'],'Indeedee-F':['Follow Me','Helping Hand','Psychic','Protect'],'Kingambit':['Kowtow Cleave','Iron Head','Sucker Punch','Protect'],'Golisopod-Mega':['Liquidation','First Impression','Close Combat','Protect'],'Basculegion':['Wave Crash','Aqua Jet','Last Respects','Protect'],'Basculegion-F':['Muddy Water','Shadow Ball','Ice Beam','Protect'],'Farigiraf':['Trick Room','Psychic','Helping Hand','Protect'],'Gholdengo':['Make It Rain','Shadow Ball','Nasty Plot','Protect'],'Pelipper':['Hurricane','Weather Ball','Tailwind','Wide Guard'],'Politoed':['Scald','Icy Wind','Encore','Protect'],'Archaludon':['Electro Shot','Draco Meteor','Flash Cannon','Protect'],'Milotic':['Scald','Ice Beam','Icy Wind','Protect'],'Raichu-Mega-X':['Fake Out','Volt Tackle','Close Combat','Protect'],'Raichu-Mega-Y':['Thunderbolt','Volt Switch','Fake Out','Protect'],'Charizard-Mega-Y':['Heat Wave','Solar Beam','Protect','Overheat'],'Whimsicott':['Tailwind','Moonblast','Encore','Protect'],'Sinistcha':['Matcha Gotcha','Rage Powder','Trick Room','Protect'],'Floette-Mega':['Light of Ruin','Moonblast','Protect','Calm Mind'],'Sylveon':['Hyper Voice','Moonblast','Protect','Helping Hand'],'Volcarona':['Heat Wave','Bug Buzz','Rage Powder','Protect'],'Garchomp':['Stomping Tantrum','Dragon Claw','Rock Slide','Protect'],'Garchomp-Mega-Z':['Draco Meteor','Earth Power','Fire Blast','Protect'],'Armarouge':['Expanding Force','Armor Cannon','Trick Room','Protect'],'Torkoal':['Eruption','Heat Wave','Earth Power','Protect'],'Tyranitar':['Rock Slide','Knock Off','Low Kick','Protect'],'Tyranitar-Mega':['Rock Slide','Knock Off','Low Kick','Protect'],'Excadrill':['High Horsepower','Iron Head','Rock Slide','Protect'],'Excadrill-Mega':['High Horsepower','Iron Head','Rock Slide','Protect'],'Corviknight':['Tailwind','Brave Bird','Roost','Protect'],'Hatterene':['Trick Room','Dazzling Gleam','Psychic','Protect'],'Maushold':['Follow Me','Population Bomb','Taunt','Protect'],'Arboliva':['Energy Ball','Hyper Voice','Strength Sap','Protect'],'Rotom-Wash':['Hydro Pump','Thunderbolt','Will-O-Wisp','Protect'],'Grimmsnarl':['Reflect','Light Screen','Spirit Break','Taunt'],'Delphox-Mega':['Heat Wave','Psychic','Protect','Will-O-Wisp'],'Metagross-Mega':['Meteor Mash','Zen Headbutt','Bullet Punch','Protect'],'Gardevoir-Mega':['Dazzling Gleam','Psychic','Mystical Fire','Protect'],'Ninetales-Alola':['Aurora Veil','Blizzard','Icy Wind','Protect'],'Annihilape':['Rage Fist','Drain Punch','Bulk Up','Protect'],'Ceruledge':['Bitter Blade','Shadow Sneak','Swords Dance','Protect'],'Gengar-Mega':['Shadow Ball','Sludge Bomb','Icy Wind','Protect'],'Staraptor-Mega':['Brave Bird','Close Combat','Tailwind','Protect'],'Swampert-Mega':['Waterfall','High Horsepower','Ice Punch','Protect'],'Baxcalibur-Mega':['Glaive Rush','Icicle Crash','Ice Shard','Protect'],'Pawmot':['Fake Out','Close Combat','Double Shock','Protect'],'Arcanine-Hisui':['Flare Blitz','Rock Slide','Extreme Speed','Protect'],'Dragonite':['Extreme Speed','Dragon Claw','Tailwind','Protect'],'Dragapult':['Dragon Darts','Phantom Force','Will-O-Wisp','Protect'],'Amoonguss':['Spore','Rage Powder','Pollen Puff','Protect'],'Talonflame':['Tailwind','Brave Bird','Will-O-Wisp','Protect'],'Sableye':['Fake Out','Quash','Will-O-Wisp','Taunt'],'Hydreigon':['Draco Meteor','Dark Pulse','Tailwind','Protect'],'Primarina':['Hyper Voice','Moonblast','Haze','Protect']};
-const MOVES={ 'Wood Hammer':['Grass',120,'physical'],'Grassy Glide':['Grass',55,'physical'],'Close Combat':['Fighting',120,'physical'],'Dire Claw':['Poison',80,'physical'],'Flare Blitz':['Fire',120,'physical'],'Knock Off':['Dark',65,'physical'],'Wave Crash':['Water',120,'physical'],'Aqua Jet':['Water',40,'physical'],'Liquidation':['Water',85,'physical'],'Draco Meteor':['Dragon',130,'special'],'Dragon Claw':['Dragon',80,'physical'],'Iron Head':['Steel',80,'physical'],'High Horsepower':['Ground',95,'physical'],'Earthquake':['Ground',100,'physical'],'Stomping Tantrum':['Ground',75,'physical'],'Rock Slide':['Rock',75,'physical'],'Make It Rain':['Steel',120,'special'],'Shadow Ball':['Ghost',80,'special'],'Psychic':['Psychic',90,'special'],'Expanding Force':['Psychic',80,'special'],'Thunderbolt':['Electric',90,'special'],'Volt Tackle':['Electric',120,'physical'],'Volt Switch':['Electric',70,'special'],'Icy Wind':['Ice',55,'special'],'Ice Beam':['Ice',90,'special'],'Hyper Voice':['Normal',90,'special'],'Dazzling Gleam':['Fairy',80,'special'],'Moonblast':['Fairy',95,'special'],'Heat Wave':['Fire',95,'special'],'Eruption':['Fire',150,'special'],'Weather Ball':['Water',100,'special'],'Hurricane':['Flying',110,'special'],'Solar Beam':['Grass',120,'special'],'Energy Ball':['Grass',90,'special'],'Power Gem':['Rock',80,'special'],'Brave Bird':['Flying',120,'physical'],'Flamethrower':['Fire',90,'special'],'Bullet Punch':['Steel',40,'physical'],'Sucker Punch':['Dark',70,'physical'],'Dark Pulse':['Dark',80,'special'],'Dragon Pulse':['Dragon',85,'special'],'Flash Cannon':['Steel',80,'special'],'Scald':['Water',80,'special'],'Sludge Bomb':['Poison',90,'special'],'Double-Edge':['Normal',120,'physical'],'Meteor Mash':['Steel',90,'physical'],'Electro Shot':['Electric',130,'special'],'Overheat':['Fire',130,'special'],'Earth Power':['Ground',90,'special'],'Fire Blast':['Fire',110,'special'],'Muddy Water':['Water',90,'special'],'Feint':['Normal',30,'physical'],'Snarl':['Dark',55,'special'],'Poison Jab':['Poison',80,'physical']};
+const MOVES={ 'Wood Hammer':['Grass',120,'physical'],'Grassy Glide':['Grass',55,'physical'],'Close Combat':['Fighting',120,'physical'],'Dire Claw':['Poison',80,'physical'],'Flare Blitz':['Fire',120,'physical'],'Knock Off':['Dark',65,'physical'],'Wave Crash':['Water',120,'physical'],'Aqua Jet':['Water',40,'physical'],'Liquidation':['Water',85,'physical'],'Draco Meteor':['Dragon',130,'special'],'Dragon Claw':['Dragon',80,'physical'],'Iron Head':['Steel',80,'physical'],'High Horsepower':['Ground',95,'physical'],'Earthquake':['Ground',100,'physical'],'Stomping Tantrum':['Ground',75,'physical'],'Rock Slide':['Rock',75,'physical'],'Make It Rain':['Steel',120,'special'],'Shadow Ball':['Ghost',80,'special'],'Psychic':['Psychic',90,'special'],'Expanding Force':['Psychic',80,'special'],'Thunderbolt':['Electric',90,'special'],'Volt Tackle':['Electric',120,'physical'],'Volt Switch':['Electric',70,'special'],'Icy Wind':['Ice',55,'special'],'Ice Beam':['Ice',90,'special'],'Hyper Voice':['Normal',90,'special'],'Dazzling Gleam':['Fairy',80,'special'],'Moonblast':['Fairy',95,'special'],'Heat Wave':['Fire',95,'special'],'Eruption':['Fire',150,'special'],'Weather Ball':['Water',100,'special'],'Hurricane':['Flying',110,'special'],'Solar Beam':['Grass',120,'special'],'Energy Ball':['Grass',90,'special'],'Power Gem':['Rock',80,'special'],'Brave Bird':['Flying',120,'physical'],'Flamethrower':['Fire',90,'special'],'Bullet Punch':['Steel',40,'physical'],'Sucker Punch':['Dark',70,'physical'],'Dark Pulse':['Dark',80,'special'],'Dragon Pulse':['Dragon',85,'special'],'Flash Cannon':['Steel',80,'special'],'Scald':['Water',80,'special'],'Sludge Bomb':['Poison',90,'special'],'Double-Edge':['Normal',120,'physical'],'Meteor Mash':['Steel',90,'physical'],'Electro Shot':['Electric',130,'special'],'Overheat':['Fire',130,'special'],'Fake Out':['Normal',40,'physical'],'Seed Bomb':['Grass',80,'physical'],'Leaf Storm':['Grass',130,'special'],'Giga Drain':['Grass',75,'special'],'Gunk Shot':['Poison',120,'physical'],'Acrobatics':['Flying',55,'physical'],'Superpower':['Fighting',120,'physical'],'Crunch':['Dark',80,'physical'],'Brick Break':['Fighting',75,'physical'],'Throat Chop':['Dark',80,'physical'],'Grass Knot':['Grass',80,'special'],'Earth Power':['Ground',90,'special'],'Fire Blast':['Fire',110,'special'],'Muddy Water':['Water',90,'special'],'Feint':['Normal',30,'physical'],'Snarl':['Dark',55,'special'],'Poison Jab':['Poison',80,'physical']};
 const profiles={balanced:{name:'Balanced',desc:'Pivot, controllo del ritmo e attaccanti complementari.',needs:['pivot','tailwind'],lead:['Incineroar','Whimsicott','Farigiraf'],support:'Incineroar'},hyper:{name:'Aggressivo',desc:'Doppia pressione offensiva con priorità e speed control.',needs:['fast','physical','special'],lead:['Sneasler','Whimsicott'],support:'Sneasler'},rain:{name:'Rain',desc:'Un setter di pioggia e almeno un vero beneficiario.',needs:['rainsetter','rainabuser'],lead:['Pelipper','Archaludon','Basculegion'],support:'Pelipper'},trickroom:{name:'Trick Room',desc:'Setter dedicato e doppio attaccante lento; il fulcro veloce agisce fuori TR.',needs:['trickroom','slow'],lead:['Farigiraf','Hatterene','Torkoal'],support:'Farigiraf'},sand:{name:'Sand',desc:'Sabbia e pressione Ground/Steel; Mega Excadrill non ha Sand Rush.',needs:['sandsetter','ground'],lead:['Tyranitar','Excadrill-Mega','Excadrill'],support:'Tyranitar'},sun:{name:'Sun',desc:'Sole per spingere gli attacchi Fuoco e sfruttare il controllo meteo.',needs:['sunsetter','sunabuser'],lead:['Charizard-Mega-Y','Torkoal','Volcarona'],support:'Torkoal'},psyspam:{name:'Psyspam',desc:'Psychic Terrain + Expanding Force, con risposte a Dark e Steel.',needs:['terrain','terrainabuser'],lead:['Indeedee-F','Armarouge'],support:'Indeedee-F'}};
 const role=(n)=>new Set((SPEC[n]||'').split(' ').filter(Boolean).concat(DATA.dex[n]?.types?.map(t=>t.toLowerCase())||[]));
 const exists=(n,reg)=>Boolean(DATA.dex[n]&&RULES.isLegal(n,reg));
@@ -280,7 +281,7 @@ function baseCore(mode,anchor,reg,rand){const pick=(options,chosen)=>{let opts=o
  if(mode==='balanced'){add(['Incineroar','Milotic','Rillaboom']);add(['Whimsicott','Farigiraf','Talonflame']);}
  return seed;}
 function generate(anchor,mode='balanced',reg='mc',month='2026-09',seed=1,exclude=[]){if(!RULES.isLegal(anchor,reg))throw Error(anchor+' non è ammesso in Regulation '+reg.toUpperCase());if(mode==='psyspam'&&['Rillaboom','Raichu-Mega-X'].includes(anchor))throw Error('Il fulcro genera un terreno incompatibile con Psychic Terrain. Scegli un piano compatibile.');if(mode==='rain'&&['Charizard-Mega-Y','Torkoal'].includes(anchor))throw Error('Il fulcro attiva il sole, incompatibile con Rain. Scegli un piano diverso.');if(mode==='sun'&&['Pelipper','Politoed','Tyranitar'].includes(anchor))throw Error('Il fulcro imposta meteo incompatibile col sole.');if(mode==='sand'&&['Pelipper','Politoed'].includes(anchor))throw Error('Il fulcro attiva la pioggia, incompatibile con Sand. Scegli un piano diverso.');if(!DATA.dex[anchor])throw Error('Mancano i dati di '+anchor+'. Seleziona una specie dal catalogo o recuperala tramite PokéAPI.');if(mode!=='rain'&&['Basculegion','Archaludon'].includes(anchor))throw Error('Il set proposto per '+anchor+' si basa sulla pioggia: scegli Rain oppure prepara un set alternativo manualmente.');
- const random=seedRand(seed);const available=Object.keys(DATA.dex).filter(n=>exists(n,reg)&&Boolean(BUILDS[n]));if(!BUILDS[anchor])throw Error('Per '+anchor+' non abbiamo un set completo verificabile: non genero un team con mosse o strumenti vuoti.');if(!available.includes(anchor))throw Error('Fulcro non incluso nel roster.');const prior=new Set(exclude);let selected=null;let best=-Infinity;
+ const random=seedRand(seed);const available=Object.keys(DATA.dex).filter(n=>exists(n,reg)&&(Boolean(BUILDS[n])||n===anchor));if(!available.includes(anchor))throw Error('Fulcro non incluso nel roster.');const prior=new Set(exclude);let selected=null;let best=-Infinity;
  for(let iteration=0;iteration<120;iteration++){let rand=seedRand(Math.floor(random()*2**32));let team=[anchor,...baseCore(mode,anchor,reg,rand)];
  const megaChoices={
  balanced:['Salamence-Mega','Metagross-Mega','Gardevoir-Mega','Golisopod-Mega','Excadrill-Mega','Baxcalibur-Mega','Delphox-Mega'],
@@ -431,8 +432,116 @@ const CHAMPIONS_ITEMS=new Set([
 ]);
 const isChampionItem=(name,item)=>RULES.isMega(name)?
   Boolean(item&&BUILDS[name]?.[1]===item):CHAMPIONS_ITEMS.has(item);
+
+/* Adaptation layer: verify source before claiming Champions legality. A species doesn't need
+   a hand-authored team template. Learned moves come from Champions records when available;
+   PokéAPI is a FALLBACK and not equivalent to the Champions move list. */
+DATA.learnsets=DATA.learnsets||{};
+const CHAMPIONS_VERIFIED={
+ Simisage:{
+  abilities:['Gluttony','Overgrow'],
+  moves:['Acrobatics','Brick Break','Crunch','Energy Ball','Fake Out','Focus Blast',
+   'Giga Drain','Grass Knot','Grassy Glide','Gunk Shot','Helping Hand','Leaf Storm',
+   'Leech Seed','Low Kick','Nasty Plot','Protect','Rock Slide','Seed Bomb','Shadow Claw',
+   'Solar Beam','Solar Blade','Substitute','Sunny Day','Superpower','Taunt',
+   'Throat Chop','Trailblaze'],
+  source:'https://www.serebii.net/pokedex-champions/simisage/',
+  verified:true
+ }
+};
+const UTILITY_MOVES=new Set(['Protect','Helping Hand','Fake Out','Tailwind','Trick Room','Taunt','Encore',
+ 'Will-O-Wisp','Spore','Rage Powder','Follow Me','Swords Dance','Nasty Plot','Rain Dance',
+ 'Sunny Day','Leech Seed','Substitute','Thunder Wave','Eerie Impulse','Electroweb',
+ 'Icy Wind','Grassy Terrain','Electric Terrain','Reflect','Light Screen']);
+function inferredTags(n){
+ const p=DATA.dex[n],tag=new Set(role(n));
+ if(!p?.stats)return tag;
+ if(p.stats[5]>=95)tag.add('fast');
+ if(p.stats[5]<=65)tag.add('slow');
+ if(p.stats[1]>=p.stats[3]+10)tag.add('physical');
+ else if(p.stats[3]>=p.stats[1]+10)tag.add('special');
+ else {tag.add('physical');tag.add('special');}
+ if(p.stats[0]+p.stats[2]+p.stats[4]>=290)tag.add('bulky');
+ return tag;
+}
+function eligibleMoves(name,mode,team){
+ const p=DATA.dex[name],source=CHAMPIONS_VERIFIED[name]||DATA.learnsets[name];
+ const learned=source?.moves||[];
+ if(learned.length)return [...new Set(learned)].filter(m=>MOVES[m]||UTILITY_MOVES.has(m));
+ // Last-resort theorycrafting: candidate moves from type/role, legality NOT verified.
+ const physical=(p?.stats?.[1]||80)>=(p?.stats?.[3]||80);
+ const pool=Object.keys(MOVES).filter(m=>{
+  const [type,power,cat]=MOVES[m];
+  return (p.types.includes(type)||['Normal','Rock','Ground','Fighting','Dark','Ice','Poison'].includes(type))&&
+    (cat===(physical?'physical':'special')||p.types.includes(type))&&power>35
+ });
+ return [...new Set([...pool,'Protect','Helping Hand','Taunt'])];
+}
+function synthesizeSet(name,mode,team=[]){
+ const p=DATA.dex[name],facts=CHAMPIONS_VERIFIED[name]||DATA.learnsets[name],r=inferredTags(name);
+ const naturalAtk=p.stats[1],naturalSpa=p.stats[3];
+ const teammatePhysical=team.filter(n=>n!==name&&role(n).has('physical')).length,
+  teammateSpecial=team.filter(n=>n!==name&&role(n).has('special')).length;
+ const special=naturalSpa-naturalAtk>11||(Math.abs(naturalSpa-naturalAtk)<=11&&teammateSpecial<teammatePhysical);
+ const tr=(mode==='trickroom'&&p.stats[5]<=70);
+ const nature=tr?(special?'Quiet':'Brave'):p.stats[5]>=90?(special?'Timid':'Jolly'):(special?'Modest':'Adamant');
+ const pool=eligibleMoves(name,mode,team);
+ const candidates=pool.map(m=>{
+  const info=MOVES[m],isSupport=!info,attack=info&&info[2]===(special?'special':'physical');
+  let value=0;
+  if(info){
+   const [type,power]=info;
+   const stab=p.types.includes(type);
+   const effective=[...MC_META_EVIDENCE.top].slice(0,13).filter(x=>DATA.dex[x[0]]);
+   const pressure=effective.reduce((a,[target,freq])=>a+Math.min(2,effectiveness(type,DATA.dex[target].types))*(freq/100),0);
+   value+=power*.10+(stab?12:0)+(attack?11:-9)+pressure*2.1;
+   if(m==='Leaf Storm'&&special)value-=3; // SpA -2 after use
+   if(m==='Superpower')value-=3;
+   if(m==='Fake Out')value+=24;
+   if(m==='Grassy Glide'&&team.includes('Rillaboom'))value+=12;
+   if(m==='Solar Beam'&&mode!=='sun')value-=25;
+  }else{
+   value=({Protect:33,'Helping Hand':19,Taunt:12,'Nasty Plot':special?18:0,
+    'Swords Dance':special?0:18,'Leech Seed':6,'Sunny Day':mode==='sun'?8:-5,
+    'Trick Room':tr?16:-18, 'Tailwind':12,'Spore':28,'Follow Me':22}[m]??3);
+  }
+  return{m,value,type:info?.[0]||null,damage:!!info};
+ }).sort((a,b)=>b.value-a.value);
+ const result=[],types=new Set();
+ // One attack of the chosen offensive category + protect/utility + unique coverage.
+ const attacking=candidates.filter(x=>x.damage);
+ const preferred=attacking.find(x=>p.types.includes(x.type)&&MOVES[x.m][2]===(special?'special':'physical'))
+    ||attacking[0];
+ if(preferred){result.push(preferred.m);types.add(preferred.type);}
+ const protector=candidates.find(x=>x.m==='Protect');
+ if(protector)result.push('Protect');
+ const support=candidates.find(x=>['Fake Out','Helping Hand','Tailwind','Spore','Taunt','Nasty Plot','Swords Dance','Leech Seed'].includes(x.m)&&!result.includes(x.m));
+ if(support&&support.value>14)result.push(support.m);
+ for(const candidate of candidates){
+   if(result.length===4)break;
+   if(result.includes(candidate.m))continue;
+   if(candidate.damage&&types.has(candidate.type)&&attacking.some(x=>!types.has(x.type)&&!result.includes(x.m)&&x.value>candidate.value-12))continue;
+   result.push(candidate.m);if(candidate.type)types.add(candidate.type);
+ }
+ for(const candidate of candidates){if(result.length>=4)break;if(!result.includes(candidate.m))result.push(candidate.m);}
+ // Intentionally avoid claiming a Mega Stone without knowing its name.
+ const item=RULES.isMega(name)?(BUILDS[name]?.[1]||''):p.stats[0]+p.stats[2]<160?'Focus Sash':special||naturalAtk>=110?'Life Orb':'Sitrus Berry';
+ const abilities=facts?.abilities||[];
+ const preferredAbility=item.includes('Berry')&&abilities.includes('Gluttony')?'Gluttony':
+   abilities.includes('Overgrow')?'Overgrow':abilities[0]||'Abilità da verificare';
+ const certainty=facts?.verified?'champions':facts?'pokedex-legacy':'hypothesis';
+ const origin=certainty==='champions'?'Learnset e abilità Champions verificati: '+facts.source:
+   certainty==='pokedex-legacy'?'Mosse/abilità estratte da PokéAPI (giochi precedenti); confermare quali sono disponibili su Champions.':
+   'Bozza basata su statistiche, tipo e matchup: learnset/abilità Champions non verificati, da controllare prima di giocare.';
+ return{name,nature,ability:preferredAbility,item,moves:result.slice(0,4).concat(Array(Math.max(0,4-result.length)).fill('')),
+  sp:[0,0,0,0,0,0],curated:true,generated:true,certainty,source:facts?.source||'',
+  originNote:origin, note:'Set costruito dinamicamente dal roster e dagli avversari, non copiato da uno schema fisso.',
+  roleReason:'Ruolo inferito: '+(special?'attaccante speciale / utility':'attaccante fisico / utility')+
+   '; Speed base '+p.stats[5]+', natura '+nature+', core '+mode+'.'};
+}
 const ITEM_ALTERNATIVES=['Sitrus Berry','Shuca Berry','Air Balloon','Mental Herb','Life Orb','Rocky Helmet','Leftovers','Focus Sash','Eject Button','Expert Belt','Lum Berry','Choice Scarf','Mystic Water','Black Glasses','Miracle Seed','Grassy Seed','Psychic Seed','White Herb'];
 function suggestSet(n,mode='balanced',usedItems=[],team=[]){
+ if(!BUILDS[n])return synthesizeSet(n,mode,team);
  const spec=BUILDS[n],r=role(n),p=DATA.dex[n]||{},fast=(p.stats?.[5]||70)>=90,slow=(p.stats?.[5]||70)<=65;
  let ability=spec?.[0]||'',item=spec?.[1]||'',nature=spec?.[2]||(r.has('special')?'Modest':'Adamant');
  if(item&&!isChampionItem(n,item))item=RULES.isMega(n)?'':'Sitrus Berry';
@@ -892,8 +1001,8 @@ function buildSets(team,mode,reg='mc',month='2026-09'){
  const sets=team.map(n=>{
    const set=suggestSet(n,mode,[],team);
    if(n==='Dedenne'){const plan=planDedenneMoves(team,mode);set.moves=plan.moves;set.movesReason=plan.reason;}
-   else set.movesReason='Mosse iniziali da set catalogato, da rivalutare secondo il matchup e il learnset Champions.';
-   if(!set.curated||!set.ability||set.moves.length!==4||set.moves.some(m=>!m))
+   else set.movesReason=set.generated?'Mosse proposte confrontando caratteristiche, ruolo e avversari; verifica il livello della fonte.':'Mosse iniziali da set catalogato, da rivalutare secondo il matchup e il learnset Champions.';
+   if(!set.ability||set.moves.length!==4||set.moves.some(m=>!m))
      throw Error('Set incompleto per '+n+': non lo spaccio per valido.');
    return set;
  });
@@ -919,7 +1028,7 @@ function buildSets(team,mode,reg='mc',month='2026-09'){
 function statValue(base,sp,stat,nature='neutral'){const pts=Math.max(0,Math.min(32,Number(sp)||0));if(stat==='hp')return base+75+pts;return Math.floor((base+20+pts)*(nature==='plus'?1.1:nature==='minus'?.9:1));}
 function damage(attacker,defender,move,{offSP=32,defSP=0,hpSP=0,offNature='plus',defNature='neutral',boost=1}={}){const a=DATA.dex[attacker],d=DATA.dex[defender],m=MOVES[move];if(!a||!d||!m)return null;const [type,power,category]=m;const physical=category==='physical',A=statValue(a.stats[physical?1:3],offSP,'off',offNature),D=statValue(d.stats[physical?2:4],defSP,'def',defNature),hp=statValue(d.stats[0],hpSP,'hp');const eff=effectiveness(type,d.types),stab=a.types.includes(type)?1.5:1;const base=Math.floor(Math.floor(22*power*A/D)/50)+2;const max=Math.floor(base*stab*eff*boost),min=Math.floor(max*.85);return{min,max,hp,percentMin:+(100*min/hp).toFixed(1),percentMax:+(100*max/hp).toFixed(1),eff};}
 function optimizeBulk(defender,attacker,move,{offSP=32,chip=0,offNature='plus',fixedSP=0}={}){let best=null;for(let hp=0;hp<=32;hp++)for(let def=0;def<=32;def++){if(hp+def+fixedSP>66)continue;const d=damage(attacker,defender,move,{offSP,defSP:def,hpSP:hp,offNature});if(!d)continue;const remaining=Math.floor(d.hp*(1-chip/100));if(d.max<remaining&&(!best||hp+def<best.hpSP+best.defSP||(hp+def===best.hpSP+best.defSP&&d.hp-d.max>best.margin)))best={...d,hpSP:hp,defSP:def,margin:d.hp-d.max};}return best;}
-const core={DATA,RULES,TYPES,profiles,periods,role,usage,weaknesses,generate,isLegalTeam,effectiveness,statValue,damage,optimizeBulk,MOVES,MOVESETS,styleFit,suggestSet,buildSets,optimizeSetSP:allocateSetSP,MC_META_EVIDENCE,metaTournamentUsage,tournamentCoreFit,strategyAudit,isChampionItem,threatMatrix};root.SCOUT_CORE=core;if(typeof module!=='undefined'&&module.exports)module.exports=core;
+const core={DATA,RULES,TYPES,profiles,periods,role,usage,weaknesses,generate,isLegalTeam,effectiveness,statValue,damage,optimizeBulk,MOVES,MOVESETS,styleFit,suggestSet,buildSets,optimizeSetSP:allocateSetSP,MC_META_EVIDENCE,metaTournamentUsage,tournamentCoreFit,strategyAudit,isChampionItem,threatMatrix,CHAMPIONS_VERIFIED,inferredTags,synthesizeSet};root.SCOUT_CORE=core;if(typeof module!=='undefined'&&module.exports)module.exports=core;
 })(typeof window!=='undefined'?window:globalThis);
 </script><script>/* VGC SCOUT — new UI built around the independent strategy engine. */
 (()=>{'use strict';const C=window.SCOUT_CORE,$=s=>document.querySelector(s),E=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
