@@ -3,7 +3,7 @@
 const self=new Set('Protect|Detect|Trick Room|Tailwind|Wide Guard|Rain Dance|Sunny Day|Swords Dance|Nasty Plot|Calm Mind|Agility|Recover|Roost|Haze'.split('|'));
 const ally=new Set('Helping Hand|Pollen Puff|Heal Pulse'.split('|'));
 const spread=new Set('Dazzling Gleam|Heat Wave|Rock Slide|Earthquake|Surf|Discharge|Muddy Water|Make It Rain|Hyper Voice|Snarl|Icy Wind|Eruption|Water Spout|Blizzard'.split('|'));
-const extra=new Set([...self,...ally,'Will-O-Wisp','Thunder Wave','Spore','Taunt','Fake Tears','Charm','Eerie Impulse','Fake Out','Follow Me','Rage Powder','Quick Guard','Reflect','Light Screen','Parting Shot','Encore','Quash']);
+const extra=new Set([...self,...ally,'Will-O-Wisp','Thunder Wave','Spore','Taunt','Fake Tears','Charm','Eerie Impulse','Fake Out','Follow Me','Rage Powder','Quick Guard','Reflect','Light Screen','Quash']);
 const priority={Protect:4,Detect:4,'Helping Hand':5,'Fake Out':3,'Wide Guard':3,'Quick Guard':3,'Follow Me':2,'Rage Powder':2,'First Impression':2,'Sucker Punch':1,'Aqua Jet':1,'Bullet Punch':1,'Extreme Speed':2,'Trick Room':-7};
 const natures={Adamant:[1,3],Jolly:[5,3],Modest:[3,1],Timid:[5,1],Bold:[2,1],Calm:[4,1],Careful:[4,3],Impish:[2,3],Brave:[1,5],Quiet:[3,5],Relaxed:[2,5],Sassy:[4,5]};
 const core=()=>root.SCOUT_CORE,F=Math.floor,base=s=>s.replace(/-Mega(?:-[XYZ])?$/,''),clamp=(x,l,h)=>Math.max(l,Math.min(h,x));
@@ -29,8 +29,9 @@ if(p.item==='Life Orb'){p.hp-=Math.max(1,F(p.maxHP/10));refresh(p);msg(b,p.name+
 if(['Flare Blitz','Wood Hammer','Brave Bird','Volt Tackle','Wave Crash'].includes(m)){p.hp-=Math.max(1,F(n/3));refresh(p);msg(b,p.name+': recoil '+m+' ('+p.health+'%).')}
 if(d.item==='Focus Sash'&&d.hp===0&&n>=d.maxHP&&d.maxHP>1){d.hp=1;d.item='';refresh(d);msg(b,d.name+' resiste grazie a Focus Sash.')}if(d.item==='Sitrus Berry'&&d.hp>0&&d.hp<=d.maxHP/2){d.hp=clamp(d.hp+F(d.maxHP/4),0,d.maxHP);d.item='';refresh(d);msg(b,d.name+' recupera PS con Sitrus Berry.')}
 if(d.hp===0)msg(b,d.name+' è esausto.')}
-function resolve(b,a){const p=b.team[a.side][a.pos];if(!p||p.hp<=0)return;if(p.flinch){msg(b,p.name+' tentenna.');return}
-const m=a.move;if(!known(m)){msg(b,'Mossa non ancora supportata: '+m);return}if(m==='Fake Out'&&p.firstTurn!==b.turn){msg(b,p.name+': Fake Out fallisce, non è il primo turno.');return}
+function resolve(b,a){const p=b.team[a.side][a.pos];if(!p||p.hp<=0)return;if(p.flinch){msg(b,p.name+' tentenna.');return}if(p.status==='sleep'){p.sleepTurns=(p.sleepTurns??2)-1;if(p.sleepTurns>0){msg(b,p.name+' dorme e non può agire.');return}p.status=null;msg(b,p.name+' si sveglia.')}if(p.status==='paralysis'&&b.turn%4===3){msg(b,p.name+' è completamente paralizzato.');return}
+const m=a.move;if(!known(m)){msg(b,'Mossa non ancora supportata: '+m);return}if(p.taunt&&['Trick Room','Tailwind','Helping Hand','Protect','Detect','Recover','Roost'].includes(m)){msg(b,p.name+' non può usare '+m+' per Taunt.');return}
+if(m==='Fake Out'&&p.firstTurn!==b.turn){msg(b,p.name+': Fake Out fallisce, non è il primo turno.');return}
 if(m==='Protect'||m==='Detect'){p.protected=true;msg(b,p.name+' si protegge.');return}
 if(m==='Wide Guard'){b.guards[p.side]=true;msg(b,p.name+' usa Wide Guard.');return}
 if(m==='Quick Guard'){b.quickGuard[p.side]=true;msg(b,p.name+' usa Quick Guard.');return}
@@ -45,26 +46,28 @@ if(m==='Recover'||m==='Roost'){p.hp=clamp(p.hp+F(p.maxHP/2),0,p.maxHP);refresh(p
 if(m==='Haze'){for(const team of b.team)for(const t of team)t.stages=[0,0,0,0,0,0];msg(b,'Haze azzera tutti i modificatori.');return}
 if(m==='Reflect'||m==='Light Screen'){b.screens[p.side][m]=5;msg(b,p.name+' usa '+m+'.');return}
 if(m==='Taunt'){const d=b.team[1-p.side][a.target||0];if(d){d.taunt=3;msg(b,d.name+' subisce Taunt.')}return}
+if(m==='Fake Tears'||m==='Charm'||m==='Eerie Impulse'){const d=b.team[1-p.side][a.target||0];if(d&&!d.protected){boost(d,m==='Charm'?1:m==='Fake Tears'?4:3,-2);msg(b,d.name+' subisce '+m+' (-2 livelli).')}return}
 const foes=b.team[1-a.side];let targets=spread.has(m)?foes.slice(0,2).filter(x=>x.hp>0):[foes[a.target===1?1:0]].filter(x=>x?.hp>0);
 if(!spread.has(m)&&b.redirect[1-p.side]?.hp>0)targets=[b.redirect[1-p.side]];
 if(a.side!==targets[0]?.side&&b.quickGuard[1-p.side]&&actionPriority(b,p,m)>0){msg(b,m+' bloccata da Quick Guard.');return}
-if(m==='Will-O-Wisp'||m==='Thunder Wave'||m==='Spore'){for(const t of targets)if(!t.protected&&!t.status){t.status=m==='Will-O-Wisp'?'burn':m==='Thunder Wave'?'paralysis':'sleep';msg(b,t.name+': '+t.status)}return}
+if(m==='Will-O-Wisp'||m==='Thunder Wave'||m==='Spore'){for(const t of targets)if(!t.protected&&!t.status){t.status=m==='Will-O-Wisp'?'burn':m==='Thunder Wave'?'paralysis':'sleep';if(t.status==='sleep')t.sleepTurns=2;msg(b,t.name+': '+t.status)}return}
+if(m==='Quash'){const d=targets[0];if(d){d.quashed=b.turn;msg(b,d.name+' subisce Quash (ordine semplificato).')}return}
 if(self.has(m)||ally.has(m)){msg(b,m+' non è ancora simulata fedelmente.');return}
 for(const t of targets)hit(b,p,t,m,targets.length);}
 function switchMon(b,side,pos,to,forced=false){const team=b.team[side];to=Number(to);if(to<2||to>=4||!team[to]||team[to].hp<=0||(!forced&&team[pos].hp<=0))return false;const old=team[pos];[team[pos],team[to]]=[team[to],team[pos]];old.stages=[0,0,0,0,0,0];enter(b,team[pos],pos,forced?'sostituzione per KO':'switch');if(!forced)team[pos].firstTurn=b.turn+1;return true}
 function opponent(b){const out=[];for(let i=0;i<2;i++){const p=b.foes[i];if(!p||p.hp<=0)continue;let best=null;for(const move of p.moves){if(!known(move))continue;for(let target=0;target<2;target++){const d=b.ours[target];if(!d?.hp)continue;const value=dmg(b,p,d,move)?.hp||0;const score=value/(d.maxHP||1)+(move==='Fake Out'&&p.firstTurn===b.turn?.1:0);if(!best||score>best.score)best={side:1,pos:i,move,target,score}}}if(best)out.push(best)}return out}
 function actionPriority(b,p,m){return (priority[m]||0)+(p.ability==='Prankster'&&self.has(m)?1:0)}
 function turn(b,actions){if(b.phase!=='playing')throw Error('Sostituzione necessaria o partita conclusa');if(actions?.length!==2)throw Error('Due azioni richieste');
-for(let i=0;i<2;i++){if(!b.ours[i]?.hp)throw Error('Pokémon esausto da sostituire');if(!actions[i]?.move)throw Error('Azione mancante');if(actions[i].move!=='__switch__'&&!b.ours[i].moves.includes(actions[i].move))throw Error('Mossa non presente nel set')}
+for(let i=0;i<2;i++){if(!b.ours[i]?.hp){if(actions[i]?.move==='__pass__')continue;throw Error('Pokémon esausto da sostituire')}if(!actions[i]?.move)throw Error('Azione mancante');if(actions[i].move!=='__switch__'&&!b.ours[i].moves.includes(actions[i].move))throw Error('Mossa non presente nel set')}
 b.guards=[false,false];b.quickGuard=[false,false];b.redirect=[null,null];b.screens=b.screens||[{},{}];for(const t of b.team.flat()){t.protected=false;t.flinch=false;t.helping=false}
 const queue=[...actions.map((a,i)=>({side:0,pos:i,...a})),...opponent(b)];
 for(const a of queue.filter(a=>a.move==='__switch__'))switchMon(b,a.side,a.pos,a.switchTo);
 for(const a of queue.filter(a=>a.move!=='__switch__'&&a.mega))mega(b,b.team[a.side][a.pos]);
-const ordered=queue.filter(a=>a.move!=='__switch__').map(a=>({...a,p:b.team[a.side][a.pos]}));
+const ordered=queue.filter(a=>a.move!=='__switch__'&&a.move!=='__pass__').map(a=>({...a,p:b.team[a.side][a.pos]}));
 ordered.sort((a,z)=>actionPriority(b,z.p,z.move)-actionPriority(b,a.p,a.move)||(b.trickRoomTurns?speed(b,a.p)-speed(b,z.p):speed(b,z.p)-speed(b,a.p))||a.side-z.side);
 msg(b,'── Turno '+(b.turn+1)+' ──'+(b.trickRoomTurns?' · Trick Room':''));
 ordered.forEach(a=>resolve(b,a));
-for(const t of b.team.flat()){if(t.hp<=0)continue;if(t.status==='burn'){t.hp-=Math.max(1,F(t.maxHP/16));refresh(t)}if(t.item==='Leftovers'){t.hp+=Math.max(1,F(t.maxHP/16));refresh(t)}}
+for(const t of b.team.flat()){if(t.hp<=0)continue;if(t.status==='burn'){t.hp-=Math.max(1,F(t.maxHP/16));refresh(t)}if(t.taunt>0)t.taunt--;if(t.item==='Leftovers'){t.hp+=Math.max(1,F(t.maxHP/16));refresh(t)}}
 if(b.trickRoomTurns)b.trickRoomTurns--;for(let i=0;i<2;i++)if(b.tailwind[i])b.tailwind[i]--;for(const sc of b.screens)for(const key of Object.keys(sc)){if(sc[key]>0)sc[key]--}
 if(b.weatherTurns&&! --b.weatherTurns)b.weather='';if(b.terrainTurns&&! --b.terrainTurns)b.terrain='';
 b.turn++;b.replace=[];for(let side=0;side<2;side++)for(let pos=0;pos<2;pos++)if(!b.team[side][pos]?.hp&&b.team[side].some((t,j)=>j>=2&&t.hp>0)){if(side===0){b.replace.push(pos);msg(b,'Il tuo Pokémon nello slot '+(pos+1)+' è esausto: scegli una riserva.')}else{const k=b.team[side].findIndex((t,j)=>j>=2&&t.hp>0);switchMon(b,side,pos,k,true)}}
