@@ -1536,7 +1536,7 @@ function damage(attacker,defender,move,{offSP=32,defSP=0,hpSP=0,offNature='plus'
 function optimizeBulk(defender,attacker,move,{offSP=32,chip=0,offNature='plus',fixedSP=0}={}){let best=null;for(let hp=0;hp<=32;hp++)for(let def=0;def<=32;def++){if(hp+def+fixedSP>66)continue;const d=damage(attacker,defender,move,{offSP,defSP:def,hpSP:hp,offNature});if(!d)continue;const remaining=Math.floor(d.hp*(1-chip/100));if(d.max<remaining&&(!best||hp+def<best.hpSP+best.defSP||(hp+def===best.hpSP+best.defSP&&d.hp-d.max>best.margin)))best={...d,hpSP:hp,defSP:def,margin:d.hp-d.max};}return best;}
 const core={DATA,RULES,TYPES,profiles,periods,role,usage,weaknesses,generate,isLegalTeam,effectiveness,statValue,damage,optimizeBulk,MOVES,MOVESETS,styleFit,suggestSet,buildSets,optimizeSetSP:allocateSetSP,MC_META_EVIDENCE,MC_FRESH_SOURCES,metaMatchupChecklist,metaTournamentUsage,tournamentCoreFit,strategyAudit,isChampionItem,threatMatrix,CHAMPIONS_VERIFIED,inferredTags,synthesizeSet,chooseArchetype,applyArchetype,metaSurprisePlan,ANTIMETA_BLUEPRINTS};root.SCOUT_CORE=core;if(typeof module!=='undefined'&&module.exports)module.exports=core;
 })(typeof window!=='undefined'?window:globalThis);
-</script><script>/* VGC SCOUT — new UI built around the independent strategy engine. */
+</script><script src="./scout-battle-engine.js"></script><script>/* VGC SCOUT — new UI built around the independent strategy engine. */
 (()=>{'use strict';const C=window.SCOUT_CORE,$=s=>document.querySelector(s),E=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const DB=C.DATA.dex;const validPeriods=C.periods;const latest={mc:'2026-09',mb:'2026-08',ma:'2026-06'};
 const old=(()=>{try{return JSON.parse(localStorage.getItem('vgc-scout-reboot')||'{}')}catch{return{}}})();
@@ -1714,7 +1714,7 @@ const SCOUT_SPREAD_MOVES=new Set(['Dazzling Gleam','Heat Wave','Rock Slide','Ear
 function scoutTargetKind(m){return SCOUT_GLOBAL_MOVES.has(m)?'self':SCOUT_ALLY_MOVES.has(m)?'ally':SCOUT_SPREAD_MOVES.has(m)?'spread':'foe'}
 function scoutUnit(x){
  let moves=Array.isArray(x.moves)&&x.moves.length?x.moves:(C.MOVESETS[x.name]||[]);
- return {name:scoutBaseName(x.name),megaForm:x.name!==scoutBaseName(x.name)?x.name:null,mega:false,health:100,max:100,moves:moves.filter(Boolean),item:x.item||'',ability:x.ability||''};
+ return {name:scoutBaseName(x.name),megaForm:x.name!==scoutBaseName(x.name)?x.name:null,mega:false,health:100,max:100,moves:moves.filter(Boolean),item:x.item||'',ability:x.ability||'',nature:x.nature||'Neutral',sp:x.sp||[0,0,0,0,0,0]};
 }
 function setupBattle(){
  const ours=validTeam();if(ours.length<4){toast('Servono almeno quattro Pokémon per il test.');route('builder');return}
@@ -1729,58 +1729,28 @@ function previewPick(index){
  render();
 }
 function beginBattle(){
- const b=state.battle;if(!b||b.selected.length!==4){toast('Seleziona quattro Pokémon; i primi due saranno la lead.');return}
- b.ours=b.selected.map(i=>({...b.roster[i]}));b.foes=b.foeRoster.slice(0,4).map(x=>({...x}));
- b.phase='playing';b.megaUsed=false;b.trickRoomTurns=0;b.uiMega=false;b.uiChoices=[null,null];b.uiActor=0;b.log.push('La tua lead: '+b.ours[0].name+' + '+b.ours[1].name);
- b.log.push('Lead avversaria stimata: '+b.foes[0].name+' + '+b.foes[1].name);render();
-}
-function scoutStrike(src,target,move){
- const data=C.MOVES[move];if(!data||data[2]==='status')return {damage:0,note:'mossa di stato: effetto non ancora simulato'};
- const calc=C.damage(src.name,target.name,move);
- if(!calc)return {damage:0,note:'calcolo non disponibile'};
- const pct=Math.max(0,Math.round((calc.percentMin+calc.percentMax)/2));
- return {damage:pct,note:pct+'% stimato'};
+ const preview=state.battle;if(!preview||preview.selected.length!==4){toast('Seleziona quattro Pokémon, i primi due sono la lead.');return}
+ try{const into=x=>({...x,name:x.megaForm||x.name});
+  const engine=window.SCOUT_BATTLE.init(preview.selected.map(i=>into(preview.roster[i])),preview.foeRoster.slice(0,4).map(into));
+  state.battle=Object.assign(engine,{roster:preview.roster,foeRoster:preview.foeRoster,selected:preview.selected,opponent:preview.opponent,source:preview.source,uiChoices:[null,null],uiActor:0,uiMega:false,uiMovePending:null,uiShowSwitch:false});
+  state.battle.log.unshift('Avversario documentato: '+preview.opponent,'Hai scelto '+engine.ours[0].name+' + '+engine.ours[1].name+' come lead.','Lead avversaria: '+engine.foes[0].name+' + '+engine.foes[1].name+'.');
+  render();
+ }catch(err){toast('Impossibile avviare: '+err.message);console.error(err)}
 }
 function runTurn(){
  const b=state.battle;if(!b||b.phase!=='playing')return;
- const actions=[0,1].map(i=>({actor:i,move:b.uiChoices?.[i]?.move||'',target:Number(b.uiChoices?.[i]?.target??0),switchTo:String(b.uiChoices?.[i]?.switchTo??''),mega:!!b.uiChoices?.[i]?.mega}));if(actions.some(a=>!a.move)){toast('Scegli una mossa o un cambio per entrambi i Pokémon.');return}
- const events=[];
- const resolve=(side,opponents,act)=>{
-  const src=side[act.actor];if(!src||src.health<=0)return;
-  if(act.move==='__switch__'){
-   const to=Number(act.switchTo),reserve=side[to];
-   if(to<2||to>=side.length||!reserve||reserve.health<=0){events.push(src.name+': switch non valido');return}
-   side[to]=src;side[act.actor]=reserve;events.push(src.name+' viene sostituito da '+reserve.name);return;
-  }
-  if(act.mega&&src.megaForm&&!b.megaUsed){src.name=src.megaForm;src.mega=true;b.megaUsed=true;events.push(src.name+' si megaevolve prima di attaccare.')}
-  if(act.move==='Trick Room'){b.trickRoomTurns=b.trickRoomTurns?0:5;events.push(src.name+' attiva Trick Room: effetto globale sul campo.');return}
-  const kind=scoutTargetKind(act.move);if(kind==='self'||kind==='ally'){events.push(src.name+' usa '+act.move+' (effetto ancora non simulato).');return}
-  let pos=act.target;if(!opponents[pos]||opponents[pos].health<=0)pos=opponents.findIndex((x,i)=>i<2&&x.health>0);
-  if(pos<0)return;
-  const tgt=opponents[pos],out=scoutStrike(src,tgt,act.move);
-  tgt.health=Math.max(0,tgt.health-out.damage);events.push(src.name+' → '+act.move+' su '+tgt.name+' ('+out.note+')');
- };
- actions.filter(a=>a.move==='__switch__').forEach(a=>resolve(b.ours,b.foes,a));
- // This deliberately approximates turn sequencing until a full priority/speed engine exists.
- actions.filter(a=>a.move!=='__switch__').forEach(a=>resolve(b.ours,b.foes,a));
- for(let i=0;i<2;i++){
-  const src=b.foes[i];if(!src||src.health<=0)continue;
-  const moves=src.moves.filter(m=>C.MOVES[m]&&C.MOVES[m][2]!=='status'),targets=b.ours.slice(0,2).map((t,j)=>({...t,j})).filter(t=>t.health>0);
-  const candidates=moves.flatMap(move=>targets.map(t=>({move,target:t.j,damage:scoutStrike(src,t,move).damage}))).sort((a,b)=>b.damage-a.damage);
-  if(candidates[0])resolve(b.foes,b.ours,{actor:i,move:candidates[0].move,target:candidates[0].target});
- }
- b.turn++;if(b.trickRoomTurns>0){b.trickRoomTurns--;events.push('Trick Room: '+b.trickRoomTurns+' turni rimanenti (Speed non ancora applicata).')}b.uiChoices=[null,null];b.uiActor=0;b.log.push('— Turno '+b.turn+' —',...events);
- for(const [team,side] of [[b.ours,'Tu'],[b.foes,'Avversario']])for(let i=0;i<2;i++)if(team[i]?.health===0){
-  const k=team.findIndex((x,j)=>j>=2&&x.health>0);
-  if(k>=2){[team[i],team[k]]=[team[k],team[i]];b.log.push(side+': '+old.name+' è esausto; entra automaticamente '+team[i].name+' dallo slot riserva '+(sub+1)+'.')}
- }
- if(!b.ours.some(x=>x.health>0)||!b.foes.some(x=>x.health>0)){b.phase='finished';b.log.push(b.ours.some(x=>x.health>0)?'Vittoria (modello semplificato)':'Sconfitta (modello semplificato)')}
- render();
+ try{
+  window.SCOUT_BATTLE.turn(b,(b.uiChoices||[]).map(x=>x?{...x}:null));
+  b.uiChoices=[null,null];b.uiActor=0;b.uiMega=false;b.uiMovePending=null;b.uiShowSwitch=false;render();
+ }catch(err){toast('Turno non valido: '+err.message);console.error(err)}
 }
-
+function scoutReplace(slot){
+ const b=state.battle;if(!b||b.phase!=='replace')return;
+ try{window.SCOUT_BATTLE.replacement(b,b.replace[0],slot);render()}catch(err){toast(err.message)}
+}
 function scoutPickAction(actor,move,target,switchTo){
  const b=state.battle;if(!b||b.phase!=='playing')return;
- b.uiChoices=b.uiChoices||[null,null];b.uiChoices[actor]={move,target:target??0,switchTo:switchTo??'',mega:!!b.uiMega&&!b.megaUsed};b.uiMega=false;
+ b.uiChoices=b.uiChoices||[null,null];b.uiChoices[actor]={move,target:target??0,switchTo:switchTo??'',mega:!!b.uiMega&&!b.megaUsed[0]};b.uiMega=false;
  b.uiActor=actor===0?1:0;render();
 }
 function sparring(){
@@ -1796,14 +1766,15 @@ function sparring(){
  let controls='';
  if(!preview&&b.phase==='playing'){
   const actor=b.uiActor??0,unit=b.ours[actor],chosen=b.uiChoices||[null,null],pick=chosen[actor];
-  const actionButtons=unit.moves.map((m,j)=>'<button class="sd-move '+(pick?.move===m?'selected':'')+'" data-battle-move="'+j+'">'+E(m)+'<small>'+E(C.MOVES[m]?.[0]||'Stato · non simulata')+'</small></button>').join('');
+  const actionButtons=unit.moves.map((m,j)=>'<button class="sd-move '+(pick?.move===m?'selected':'')+'" data-battle-move="'+j+'" '+(!window.SCOUT_BATTLE.known(m)?'disabled title="Mossa non supportata"':'')+'>'+E(m)+'<small>'+E(!window.SCOUT_BATTLE.known(m)?'Non disponibile':C.MOVES[m]?.[0]||'Stato')+'</small></button>').join('');
   const targets=b.foes.slice(0,2).map((x,j)=>'<button class="sd-target" data-battle-target="'+j+'">'+icon(x)+E(x.name)+'</button>').join('');
   const allyTarget=scoutTargetKind(b.uiMovePending||'')==='ally'?'<button class="sd-target" data-battle-target="-1">'+icon(b.ours[actor===0?1:0])+E(b.ours[actor===0?1:0].name)+'</button>':'';
   const swaps=b.ours.map((x,j)=>j>=2&&x.health>0?'<button class="sd-switch" data-battle-switch="'+j+'">'+icon(x)+E(x.name)+' <small>'+x.health+'%</small></button>':'').join('');
-  controls='<div class="sd-command"><div class="sd-command-top"><strong>Che cosa deve fare '+E(unit.name)+'?</strong><span>'+chosen.map((v,i)=>'<button data-battle-actor="'+i+'" class="sd-actor-tab '+(actor===i?'active':'')+'">'+E(b.ours[i].name)+' '+(v?'✓':'')+'</button>').join('')+'</span></div><div class="sd-command-grid"><div class="sd-command-main"><div class="sd-move-grid">'+actionButtons+'</div><div class="sd-secondary-actions">'+(unit.megaForm&&!b.megaUsed?'<label class="sd-mega-toggle"><input type="checkbox" id="sd-mega" '+(b.uiMega?'checked':'')+'> Megaevolvi in '+E(unit.megaForm)+'</label>':'')+'<button data-battle-show="switch">Cambia Pokémon</button><button data-battle-clear="'+actor+'">Annulla scelta</button></div></div><div class="sd-command-side"><div class="sd-target-panel '+(b.uiMovePending?'':'sd-hidden')+'"><b>Seleziona il bersaglio</b>'+targets+'</div><div class="sd-switch-panel '+(b.uiShowSwitch?'':'sd-hidden')+'"><b>Entra in campo</b>'+swaps+'</div></div></div><div class="sd-confirm"><span>'+chosen.map((x,i)=>E(b.ours[i].name)+': '+(x?(x.move==='__switch__'?'Cambio':x.move):'in attesa')).join(' · ')+'</span><button class="btn primary" data-action="next-turn" '+(chosen.every(Boolean)?'':'disabled')+'>Conferma turno</button></div></div>';
+  controls='<div class="sd-command"><div class="sd-command-top"><strong>Che cosa deve fare '+E(unit.name)+'?</strong><span>'+chosen.map((v,i)=>'<button data-battle-actor="'+i+'" class="sd-actor-tab '+(actor===i?'active':'')+'">'+E(b.ours[i].name)+' '+(v?'✓':'')+'</button>').join('')+'</span></div><div class="sd-command-grid"><div class="sd-command-main"><div class="sd-move-grid">'+actionButtons+'</div><div class="sd-secondary-actions">'+(unit.megaForm&&!b.megaUsed[0]?'<label class="sd-mega-toggle"><input type="checkbox" id="sd-mega" '+(b.uiMega?'checked':'')+'> Megaevolvi in '+E(unit.megaForm)+'</label>':'')+'<button data-battle-show="switch">Cambia Pokémon</button><button data-battle-clear="'+actor+'">Annulla scelta</button></div></div><div class="sd-command-side"><div class="sd-target-panel '+(b.uiMovePending?'':'sd-hidden')+'"><b>Seleziona il bersaglio</b>'+targets+'</div><div class="sd-switch-panel '+(b.uiShowSwitch?'':'sd-hidden')+'"><b>Entra in campo</b>'+swaps+'</div></div></div><div class="sd-confirm"><span>'+chosen.map((x,i)=>E(b.ours[i].name)+': '+(x?(x.move==='__switch__'?'Cambio':x.move):'in attesa')).join(' · ')+'</span><button class="btn primary" data-action="next-turn" '+(chosen.every(Boolean)?'':'disabled')+'>Conferma turno</button></div></div>';
  }
+ const replacement=!preview&&b.phase==='replace'?'<div class="sd-actions"><h3>Scegli chi entra dopo il KO (slot '+(b.replace[0]+1)+')</h3><div class="sd-roster">'+b.ours.map((u,j)=>j>=2&&u.hp>0?'<button class="sd-switch" data-battle-replace="'+j+'">'+icon(u)+' '+E(u.name)+' · '+u.health+'%</button>':'').join('')+'</div></div>':'';
  const history=!preview?'<aside class="sd-log"><h3>Log della battaglia</h3><div class="sd-log-scroll">'+b.log.map(x=>'<p>'+E(x)+'</p>').join('')+'</div><button class="btn ghost" data-action="start-battle">Nuova partita</button></aside>':'';
- return heading('Sparring Lab','Campo e comandi ispirati a Pokémon Showdown.','BATTLE LAB')+'<div class="sd-shell">'+selector+(preview?selection:'<div class="sd-battle-columns"><main>'+field+controls+(b.phase==='finished'?'<div class="sd-actions"><strong>Partita terminata</strong><button class="btn primary" data-action="start-battle">Gioca ancora</button></div>':'')+'</main>'+history+'</div>')+'</div><p class="warning">Il motore di battaglia rimane semplificato: le priorità, le abilità e gli effetti delle mosse non sono ancora simulati fedelmente.</p>';
+ return heading('Sparring Lab','Campo e comandi ispirati a Pokémon Showdown.','BATTLE LAB')+'<div class="sd-shell">'+selector+(preview?selection:'<div class="sd-battle-columns"><main>'+field+controls+replacement+(b.phase==='finished'?'<div class="sd-actions"><strong>Partita terminata</strong><button class="btn primary" data-action="start-battle">Gioca ancora</button></div>':'')+'</main>'+history+'</div>')+'</div><p class="warning">Il motore di battaglia rimane semplificato: le priorità, le abilità e gli effetti delle mosse non sono ancora simulati fedelmente.</p>';
 }
 function render(){const screens={architect:showArchitect,meta:showMeta,intel:metaIntel,builder:renderBuilder,coverage,bulk,battle:sparring};$('#screen').innerHTML=(screens[state.route]||showArchitect)();$('#breadcrumb').textContent='SCOUT / '+state.route.toUpperCase();document.querySelectorAll('[data-route]').forEach(x=>x.classList.toggle('selected',x.dataset.route===state.route));$('#reg').value=state.reg;$('#period').innerHTML=validPeriods[state.reg].map(x=>`<option ${x===state.month?'selected':''}>${x}</option>`).join('')}
 const route=t=>{state.route=t;save();try{render()}catch(err){console.error('VGC Scout route error:',err);$('#screen').innerHTML='<div class="warning"><strong>Errore apertura '+E(t)+'</strong><p>'+E(err.message||err)+'</p><button data-route="architect" class="btn">Torna al Team Architect</button></div>'}try{window.scrollTo({top:0,behavior:'smooth'})}catch{}};
@@ -1850,8 +1821,9 @@ $('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-route]');
 $('#reg').addEventListener('change',e=>{state.reg=e.target.value;state.month=latest[state.reg];state.build=null;if(!C.RULES.isLegal(state.anchor,state.reg))state.anchor='Garchomp';state.seen={};save();render()});$('#period').addEventListener('change',e=>{state.month=e.target.value;state.build=null;save();render()});
 $('#screen').addEventListener('click',async e=>{const intentButton=e.target.closest('[data-intent]');
  if(intentButton){state.intent=intentButton.dataset.intent;state.build=null;state.seen={};save();render();return;}
- const m=e.target.closest('[data-mode]');if(m){state.mode=m.dataset.mode;state.build=null;save();render();return}const nav=e.target.closest('[data-go]');if(nav){route(nav.dataset.go);return}const battleActor=e.target.closest('[data-battle-actor]');if(battleActor){state.battle.uiActor=Number(battleActor.dataset.battleActor);state.battle.uiMovePending=null;state.battle.uiShowSwitch=false;render();return}
- const battleMove=e.target.closest('[data-battle-move]');if(battleMove){const b=state.battle,actor=b.uiActor??0;const move=b.ours[actor].moves[Number(battleMove.dataset.battleMove)];b.uiMovePending=move;b.uiShowSwitch=false;if(scoutTargetKind(move)==='self'||scoutTargetKind(move)==='spread'){scoutPickAction(actor,move,0,null);b.uiMovePending=null;return}render();return}
+ const m=e.target.closest('[data-mode]');if(m){state.mode=m.dataset.mode;state.build=null;save();render();return}const nav=e.target.closest('[data-go]');if(nav){route(nav.dataset.go);return}const battleReplace=e.target.closest('[data-battle-replace]');if(battleReplace){scoutReplace(Number(battleReplace.dataset.battleReplace));return}
+ const battleActor=e.target.closest('[data-battle-actor]');if(battleActor){state.battle.uiActor=Number(battleActor.dataset.battleActor);state.battle.uiMovePending=null;state.battle.uiShowSwitch=false;render();return}
+ const battleMove=e.target.closest('[data-battle-move]');if(battleMove){const b=state.battle,actor=b.uiActor??0;const move=b.ours[actor].moves[Number(battleMove.dataset.battleMove)];b.uiMovePending=move;b.uiShowSwitch=false;if(window.SCOUT_BATTLE.kind(move)==='self'||window.SCOUT_BATTLE.kind(move)==='spread'){scoutPickAction(actor,move,0,null);b.uiMovePending=null;return}render();return}
  const battleTarget=e.target.closest('[data-battle-target]');if(battleTarget){const b=state.battle;scoutPickAction(b.uiActor??0,b.uiMovePending,Number(battleTarget.dataset.battleTarget),null);b.uiMovePending=null;return}
  const battleShow=e.target.closest('[data-battle-show]');if(battleShow){state.battle.uiShowSwitch=true;state.battle.uiMovePending=null;render();return}
  const battleSwitch=e.target.closest('[data-battle-switch]');if(battleSwitch){const b=state.battle;scoutPickAction(b.uiActor??0,'__switch__',0,Number(battleSwitch.dataset.battleSwitch));b.uiShowSwitch=false;return}
