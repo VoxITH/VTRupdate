@@ -162,7 +162,7 @@ function switchPivot(b,side,pos,to){
  if(k<2||k>=4||!team[k]||!team[k].hp)throw Error('Riserva non valida per Eject Button');
  const old=team[pos];[team[pos],team[k]]=[team[k],team[pos]];
  old.stages=[0,0,0,0,0,0];old.choiceLocked=null;old.charging=null;old.encoreTurns=0;
- enter(b,team[pos],pos,(b.pivotCause||'Cambio')+' di '+old.name);
+ enter(b,team[pos],pos,(b.pivotCause||'Cambio')+' di '+old.name);team[pos].firstTurn=b.turn+1;
 }
 function pivotReplacement(b,to){
  if(b.phase!=='pivot'||!b.pivotSwitch||b.pivotSwitch.side!==0)throw Error('Nessuna scelta Eject Button richiesta');
