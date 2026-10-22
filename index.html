@@ -1709,7 +1709,7 @@ function scoutTournamentTeams(){
 
 function scoutUnit(x){
  let moves=Array.isArray(x.moves)&&x.moves.length?x.moves:(C.MOVESETS[x.name]||[]);
- return {name:x.name,health:100,max:100,moves:moves.filter(m=>C.MOVES[m]),item:x.item||'',ability:x.ability||''};
+ return {name:x.name,health:100,max:100,moves:moves.filter(Boolean),item:x.item||'',ability:x.ability||''};
 }
 function setupBattle(){
  const ours=validTeam();if(ours.length<4){toast('Servono almeno quattro Pokémon per il test.');route('builder');return}
@@ -1730,7 +1730,7 @@ function beginBattle(){
  b.log.push('Lead avversaria stimata: '+b.foes[0].name+' + '+b.foes[1].name);render();
 }
 function scoutStrike(src,target,move){
- const data=C.MOVES[move];if(!data||data[2]==='status')return {damage:0,note:'effetto di stato non implementato'};
+ const data=C.MOVES[move];if(!data||data[2]==='status')return {damage:0,note:'mossa di stato: effetto non ancora simulato'};
  const calc=C.damage(src.name,target.name,move);
  if(!calc)return {damage:0,note:'calcolo non disponibile'};
  const pct=Math.max(0,Math.round((calc.percentMin+calc.percentMax)/2));
@@ -1757,7 +1757,7 @@ function runTurn(){
  actions.filter(a=>a.move!=='__switch__').forEach(a=>resolve(b.ours,b.foes,a));
  for(let i=0;i<2;i++){
   const src=b.foes[i];if(!src||src.health<=0)continue;
-  const moves=src.moves.filter(m=>C.MOVES[m]?.[2]!=='status'),targets=b.ours.slice(0,2).map((t,j)=>({...t,j})).filter(t=>t.health>0);
+  const moves=src.moves.filter(m=>C.MOVES[m]&&C.MOVES[m][2]!=='status'),targets=b.ours.slice(0,2).map((t,j)=>({...t,j})).filter(t=>t.health>0);
   const candidates=moves.flatMap(move=>targets.map(t=>({move,target:t.j,damage:scoutStrike(src,t,move).damage}))).sort((a,b)=>b.damage-a.damage);
   if(candidates[0])resolve(b.foes,b.ours,{actor:i,move:candidates[0].move,target:candidates[0].target});
  }
@@ -1788,7 +1788,7 @@ function sparring(){
  let controls='';
  if(!preview&&b.phase==='playing'){
   const actor=b.uiActor??0,unit=b.ours[actor],chosen=b.uiChoices||[null,null],pick=chosen[actor];
-  const actionButtons=unit.moves.map((m,j)=>'<button class="sd-move '+(pick?.move===m?'selected':'')+'" data-battle-move="'+j+'">'+E(m)+'<small>'+E(C.MOVES[m]?.[0]||'Status')+'</small></button>').join('');
+  const actionButtons=unit.moves.map((m,j)=>'<button class="sd-move '+(pick?.move===m?'selected':'')+'" data-battle-move="'+j+'">'+E(m)+'<small>'+E(C.MOVES[m]?.[0]||'Stato · non simulata')+'</small></button>').join('');
   const targets=b.foes.slice(0,2).map((x,j)=>'<button class="sd-target" data-battle-target="'+j+'">'+icon(x)+E(x.name)+'</button>').join('');
   const swaps=b.ours.map((x,j)=>j>=2&&x.health>0?'<button class="sd-switch" data-battle-switch="'+j+'">'+icon(x)+E(x.name)+' <small>'+x.health+'%</small></button>':'').join('');
   controls='<div class="sd-command"><div class="sd-command-top"><strong>Che cosa deve fare '+E(unit.name)+'?</strong><span>'+chosen.map((v,i)=>'<button data-battle-actor="'+i+'" class="sd-actor-tab '+(actor===i?'active':'')+'">'+E(b.ours[i].name)+' '+(v?'✓':'')+'</button>').join('')+'</span></div><div class="sd-command-grid"><div class="sd-command-main"><div class="sd-move-grid">'+actionButtons+'</div><div class="sd-secondary-actions"><button data-battle-show="switch">Cambia Pokémon</button><button data-battle-clear="'+actor+'">Annulla scelta</button></div></div><div class="sd-command-side"><div class="sd-target-panel '+(b.uiMovePending?'':'sd-hidden')+'"><b>Seleziona il bersaglio</b>'+targets+'</div><div class="sd-switch-panel '+(b.uiShowSwitch?'':'sd-hidden')+'"><b>Entra in campo</b>'+swaps+'</div></div></div><div class="sd-confirm"><span>'+chosen.map((x,i)=>E(b.ours[i].name)+': '+(x?(x.move==='__switch__'?'Cambio':x.move):'in attesa')).join(' · ')+'</span><button class="btn primary" data-action="next-turn" '+(chosen.every(Boolean)?'':'disabled')+'>Conferma turno</button></div></div>';
