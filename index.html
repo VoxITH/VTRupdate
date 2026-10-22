@@ -1808,12 +1808,38 @@ function previewPick(index){
  const at=b.selected.indexOf(index);if(at>=0)b.selected.splice(at,1);else if(b.selected.length<4)b.selected.push(index);
  render();
 }
+/* Opposing four and opening pair are selected tactically from the sourced 6.
+   They are AI choices, NOT claimed historical leads from the recorded tournament. */
+function scoutOpponentSelection(roster,own){
+ const type=n=>(C.DATA.dex[n]||C.DATA.dex[n?.replace(/-Mega(?:-[XYZ])?$/,'')]||{}).types||[];
+ const name=p=>p.megaForm||p.name;
+ const matchup=p=>{
+  const attacks=p.moves.filter(m=>C.MOVES[m]&&C.MOVES[m][1]>0);
+  return own.slice(0,2).reduce((sum,t)=>{
+   if(!type(t.name).length)return sum;
+   const best=attacks.reduce((mx,m)=>Math.max(mx,C.effectiveness(C.MOVES[m][0],type(t.name))),0);
+   return sum+best;
+  },0);
+ };
+ const pairs=C.MC_META_EVIDENCE.latestEvent.latestCorePairs||[];
+ let best=null;
+ for(let i=0;i<roster.length;i++)for(let j=i+1;j<roster.length;j++){
+  const a=name(roster[i]),b=name(roster[j]);
+  const synergy=pairs.filter(x=>(x[0]===a&&x[1]===b)||(x[0]===b&&x[1]===a)).reduce((v,x)=>v+x[2],0);
+  const pairScore=synergy*11+matchup(roster[i])+matchup(roster[j])-(roster[i].megaForm&&roster[j].megaForm?2:0);
+  if(!best||pairScore>best.score)best={i,j,score:pairScore};
+ }
+ if(!best)return roster.slice(0,4);
+ const ordered=[roster[best.i],roster[best.j]];
+ const rest=roster.filter((_,i)=>i!==best.i&&i!==best.j).sort((a,b)=>matchup(b)-matchup(a));
+ return [...ordered,...rest.slice(0,2)];
+}
 function beginBattle(){
  const preview=state.battle;if(!preview||preview.selected.length!==4){toast('Seleziona quattro Pokémon, i primi due sono la lead.');return}
  try{const into=x=>({...x,name:x.megaForm||x.name});
-  const engine=window.SCOUT_BATTLE.init(preview.selected.map(i=>into(preview.roster[i])),preview.foeRoster.slice(0,4).map(into));
+  const engine=window.SCOUT_BATTLE.init(preview.selected.map(i=>into(preview.roster[i])),scoutOpponentSelection(preview.foeRoster,preview.selected.map(i=>preview.roster[i])).map(into));
   state.battle=Object.assign(engine,{roster:preview.roster,foeRoster:preview.foeRoster,selected:preview.selected,opponent:preview.opponent,source:preview.source,uiChoices:[null,null],uiActor:0,uiMega:false,uiMovePending:null,uiShowSwitch:false});
-  state.battle.log.unshift('Avversario documentato: '+preview.opponent,'Hai scelto '+engine.ours[0].name+' + '+engine.ours[1].name+' come lead.','Lead avversaria: '+engine.foes[0].name+' + '+engine.foes[1].name+'.');
+  state.battle.log.unshift('Avversario documentato: '+preview.opponent,'Lead avversaria selezionata dall’IA, non attribuita al giocatore del torneo.','Hai scelto '+engine.ours[0].name+' + '+engine.ours[1].name+' come lead.','Lead avversaria: '+engine.foes[0].name+' + '+engine.foes[1].name+'.');
   render();
  }catch(err){toast('Impossibile avviare: '+err.message);console.error(err)}
 }
@@ -1903,7 +1929,7 @@ $('#screen').addEventListener('click',async e=>{const intentButton=e.target.clos
  if(intentButton){state.intent=intentButton.dataset.intent;state.build=null;state.seen={};save();render();return;}
  const m=e.target.closest('[data-mode]');if(m){state.mode=m.dataset.mode;state.build=null;save();render();return}const nav=e.target.closest('[data-go]');if(nav){route(nav.dataset.go);return}const battleReplace=e.target.closest('[data-battle-replace]');if(battleReplace){scoutReplace(Number(battleReplace.dataset.battleReplace));return}
  const battleActor=e.target.closest('[data-battle-actor]');if(battleActor){if(!state.battle.ours[Number(battleActor.dataset.battleActor)]?.hp)return;state.battle.uiActor=Number(battleActor.dataset.battleActor);state.battle.uiMovePending=null;state.battle.uiShowSwitch=false;render();return}
- const battleMove=e.target.closest('[data-battle-move]');if(battleMove){const b=state.battle,actor=b.uiActor??0;if(!b.ours[actor]?.hp){toast('Pokémon esausto: seleziona quello ancora attivo.');return}const move=b.ours[actor].moves[Number(battleMove.dataset.battleMove)];b.uiMovePending=move;b.uiShowSwitch=false;if(window.SCOUT_BATTLE.kind(move)==='self'||window.SCOUT_BATTLE.kind(move)==='spread'){scoutPickAction(actor,move,0,null);b.uiMovePending=null;return}render();return}
+ const battleMove=e.target.closest('[data-battle-move]');if(battleMove){const b=state.battle,actor=b.uiActor??0;if(!b.ours[actor]?.hp){toast('Pokémon esausto: seleziona quello ancora attivo.');return}const move=b.ours[actor].moves[Number(battleMove.dataset.battleMove)];b.uiMovePending=move;b.uiShowSwitch=false;if(window.SCOUT_BATTLE.kind(move,b)==='self'||window.SCOUT_BATTLE.kind(move,b)==='spread'){scoutPickAction(actor,move,0,null);b.uiMovePending=null;return}render();return}
  const battleTarget=e.target.closest('[data-battle-target]');if(battleTarget){const b=state.battle;scoutPickAction(b.uiActor??0,b.uiMovePending,Number(battleTarget.dataset.battleTarget),null);b.uiMovePending=null;return}
  const battleShow=e.target.closest('[data-battle-show]');if(battleShow){state.battle.uiShowSwitch=true;state.battle.uiMovePending=null;render();return}
  const battleSwitch=e.target.closest('[data-battle-switch]');if(battleSwitch){const b=state.battle;scoutPickAction(b.uiActor??0,'__switch__',0,Number(battleSwitch.dataset.battleSwitch));b.uiShowSwitch=false;return}
