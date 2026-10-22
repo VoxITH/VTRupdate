@@ -1740,8 +1740,8 @@ function beginBattle(){
 function runTurn(){
  const b=state.battle;if(!b||b.phase!=='playing')return;
  try{
-  window.SCOUT_BATTLE.turn(b,(b.uiChoices||[]).map(x=>x?{...x}:null));
-  b.uiChoices=[null,null];b.uiActor=0;b.uiMega=false;b.uiMovePending=null;b.uiShowSwitch=false;render();
+  window.SCOUT_BATTLE.turn(b,(b.uiChoices||[]).map((x,i)=>b.ours[i].hp>0?(x?{...x}:null):{move:'__pass__'}));
+  b.uiChoices=b.ours.slice(0,2).map(x=>x.hp>0?null:{move:'__pass__'});b.uiActor=b.ours[0].hp>0?0:1;b.uiMega=false;b.uiMovePending=null;b.uiShowSwitch=false;render();
  }catch(err){toast('Turno non valido: '+err.message);console.error(err)}
 }
 function scoutReplace(slot){
@@ -1751,7 +1751,7 @@ function scoutReplace(slot){
 function scoutPickAction(actor,move,target,switchTo){
  const b=state.battle;if(!b||b.phase!=='playing')return;
  b.uiChoices=b.uiChoices||[null,null];b.uiChoices[actor]={move,target:target??0,switchTo:switchTo??'',mega:!!b.uiMega&&!b.megaUsed[0]};b.uiMega=false;
- b.uiActor=actor===0?1:0;render();
+ b.uiActor=b.ours[actor===0?1:0]?.hp>0?(actor===0?1:0):actor;render();
 }
 function sparring(){
  const b=state.battle,opps=scoutTournamentTeams();
@@ -1767,7 +1767,7 @@ function sparring(){
  if(!preview&&b.phase==='playing'){
   const actor=b.uiActor??0,unit=b.ours[actor],chosen=b.uiChoices||[null,null],pick=chosen[actor];
   const actionButtons=unit.moves.map((m,j)=>'<button class="sd-move '+(pick?.move===m?'selected':'')+'" data-battle-move="'+j+'" '+(!window.SCOUT_BATTLE.known(m)?'disabled title="Mossa non supportata"':'')+'>'+E(m)+'<small>'+E(!window.SCOUT_BATTLE.known(m)?'Non disponibile':C.MOVES[m]?.[0]||'Stato')+'</small></button>').join('');
-  const targets=b.foes.slice(0,2).map((x,j)=>'<button class="sd-target" data-battle-target="'+j+'">'+icon(x)+E(x.name)+'</button>').join('');
+  const targets=b.foes.slice(0,2).map((x,j)=>x.hp>0?'<button class="sd-target" data-battle-target="'+j+'">'+icon(x)+E(x.name)+'</button>':'').join('');
   const allyTarget=scoutTargetKind(b.uiMovePending||'')==='ally'?'<button class="sd-target" data-battle-target="-1">'+icon(b.ours[actor===0?1:0])+E(b.ours[actor===0?1:0].name)+'</button>':'';
   const swaps=b.ours.map((x,j)=>j>=2&&x.health>0?'<button class="sd-switch" data-battle-switch="'+j+'">'+icon(x)+E(x.name)+' <small>'+x.health+'%</small></button>':'').join('');
   controls='<div class="sd-command"><div class="sd-command-top"><strong>Che cosa deve fare '+E(unit.name)+'?</strong><span>'+chosen.map((v,i)=>'<button data-battle-actor="'+i+'" class="sd-actor-tab '+(actor===i?'active':'')+'">'+E(b.ours[i].name)+' '+(v?'✓':'')+'</button>').join('')+'</span></div><div class="sd-command-grid"><div class="sd-command-main"><div class="sd-move-grid">'+actionButtons+'</div><div class="sd-secondary-actions">'+(unit.megaForm&&!b.megaUsed[0]?'<label class="sd-mega-toggle"><input type="checkbox" id="sd-mega" '+(b.uiMega?'checked':'')+'> Megaevolvi in '+E(unit.megaForm)+'</label>':'')+'<button data-battle-show="switch">Cambia Pokémon</button><button data-battle-clear="'+actor+'">Annulla scelta</button></div></div><div class="sd-command-side"><div class="sd-target-panel '+(b.uiMovePending?'':'sd-hidden')+'"><b>Seleziona il bersaglio</b>'+targets+'</div><div class="sd-switch-panel '+(b.uiShowSwitch?'':'sd-hidden')+'"><b>Entra in campo</b>'+swaps+'</div></div></div><div class="sd-confirm"><span>'+chosen.map((x,i)=>E(b.ours[i].name)+': '+(x?(x.move==='__switch__'?'Cambio':x.move):'in attesa')).join(' · ')+'</span><button class="btn primary" data-action="next-turn" '+(chosen.every(Boolean)?'':'disabled')+'>Conferma turno</button></div></div>';
@@ -1822,8 +1822,8 @@ $('#reg').addEventListener('change',e=>{state.reg=e.target.value;state.month=lat
 $('#screen').addEventListener('click',async e=>{const intentButton=e.target.closest('[data-intent]');
  if(intentButton){state.intent=intentButton.dataset.intent;state.build=null;state.seen={};save();render();return;}
  const m=e.target.closest('[data-mode]');if(m){state.mode=m.dataset.mode;state.build=null;save();render();return}const nav=e.target.closest('[data-go]');if(nav){route(nav.dataset.go);return}const battleReplace=e.target.closest('[data-battle-replace]');if(battleReplace){scoutReplace(Number(battleReplace.dataset.battleReplace));return}
- const battleActor=e.target.closest('[data-battle-actor]');if(battleActor){state.battle.uiActor=Number(battleActor.dataset.battleActor);state.battle.uiMovePending=null;state.battle.uiShowSwitch=false;render();return}
- const battleMove=e.target.closest('[data-battle-move]');if(battleMove){const b=state.battle,actor=b.uiActor??0;const move=b.ours[actor].moves[Number(battleMove.dataset.battleMove)];b.uiMovePending=move;b.uiShowSwitch=false;if(window.SCOUT_BATTLE.kind(move)==='self'||window.SCOUT_BATTLE.kind(move)==='spread'){scoutPickAction(actor,move,0,null);b.uiMovePending=null;return}render();return}
+ const battleActor=e.target.closest('[data-battle-actor]');if(battleActor){if(!state.battle.ours[Number(battleActor.dataset.battleActor)]?.hp)return;state.battle.uiActor=Number(battleActor.dataset.battleActor);state.battle.uiMovePending=null;state.battle.uiShowSwitch=false;render();return}
+ const battleMove=e.target.closest('[data-battle-move]');if(battleMove){const b=state.battle,actor=b.uiActor??0;if(!b.ours[actor]?.hp){toast('Pokémon esausto: seleziona quello ancora attivo.');return}const move=b.ours[actor].moves[Number(battleMove.dataset.battleMove)];b.uiMovePending=move;b.uiShowSwitch=false;if(window.SCOUT_BATTLE.kind(move)==='self'||window.SCOUT_BATTLE.kind(move)==='spread'){scoutPickAction(actor,move,0,null);b.uiMovePending=null;return}render();return}
  const battleTarget=e.target.closest('[data-battle-target]');if(battleTarget){const b=state.battle;scoutPickAction(b.uiActor??0,b.uiMovePending,Number(battleTarget.dataset.battleTarget),null);b.uiMovePending=null;return}
  const battleShow=e.target.closest('[data-battle-show]');if(battleShow){state.battle.uiShowSwitch=true;state.battle.uiMovePending=null;render();return}
  const battleSwitch=e.target.closest('[data-battle-switch]');if(battleSwitch){const b=state.battle;scoutPickAction(b.uiActor??0,'__switch__',0,Number(battleSwitch.dataset.battleSwitch));b.uiShowSwitch=false;return}
