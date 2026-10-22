@@ -8,7 +8,8 @@ const priority={Protect:4,Detect:4,'Helping Hand':5,'Fake Out':3,'Wide Guard':3,
 const natures={Adamant:[1,3],Jolly:[5,3],Modest:[3,1],Timid:[5,1],Bold:[2,1],Calm:[4,1],Careful:[4,3],Impish:[2,3],Brave:[1,5],Quiet:[3,5],Relaxed:[2,5],Sassy:[4,5]};
 const core=()=>root.SCOUT_CORE,F=Math.floor,base=s=>s.replace(/-Mega(?:-[XYZ])?$/,''),clamp=(x,l,h)=>Math.max(l,Math.min(h,x));
 const kind=m=>self.has(m)?'self':ally.has(m)?'ally':spread.has(m)?'spread':'foe';
-const known=m=>extra.has(m)||!!core().MOVES[m];
+const unsupported=new Set(['Pollen Puff','Heal Pulse','Quash','U-turn','Volt Switch','Parting Shot','Encore','Acrobatics']);
+const known=m=>!unsupported.has(m)&&(extra.has(m)||!!core().MOVES[m]);
 const msg=(b,s)=>b.log.push(s);
 function stat(p,i){const d=core().DATA.dex[p.name]||core().DATA.dex[p.base];if(!d)return 1;const mod=natures[p.nature]||[];const n=mod[0]===i?1.1:mod[1]===i?.9:1;return i?F((d.stats[i]+20+(p.sp[i]||0))*n):d.stats[0]+75+(p.sp[0]||0)}
 function refresh(p){p.hp=clamp(p.hp,0,p.maxHP);p.health=F(100*p.hp/p.maxHP);return p.hp}
@@ -26,7 +27,7 @@ function hit(b,p,d,m,total){if(!d||!d.hp)return;
 if(p.side!==d.side&&actionPriority(b,p,m)>0){const guard=b.team[d.side].slice(0,2).find(x=>x.hp>0&&['Armor Tail','Queenly Majesty','Dazzling'].includes(x.ability));const dex=core().DATA.dex[d.name]||core().DATA.dex[d.base];const grounded=d.ability!=='Levitate'&&!dex?.types.includes('Flying');if(guard){msg(b,m+' bloccata da '+guard.ability+' di '+guard.name+'.');return}if(b.terrain==='psychic'&&grounded){msg(b,m+' bloccata da Psychic Terrain.');return}}
 if(d.protected){msg(b,d.name+' usa Protect: blocca '+m);return}if(spread.has(m)&&b.guards[d.side]){msg(b,d.name+' protetto da Wide Guard.');return}
 const c=dmg(b,p,d,m,total);if(!c){msg(b,'Effetto non supportato per '+m+'.');return}if(c.eff===0){msg(b,m+' non ha effetto su '+d.name);return}
-const n=Math.min(d.hp,c.hp);d.hp-=n;refresh(d);msg(b,p.name+' usa '+m+' su '+d.name+': -'+n+' PS ('+d.health+'%).');if(m==='Fake Out')d.flinch=true;if(m==='Icy Wind')boost(d,5,-1);if(m==='Snarl')boost(d,3,-1);if(m==='Close Combat'){boost(p,2,-1);boost(p,4,-1)}if(m==='Draco Meteor')boost(p,3,-2);
+const n=Math.min(d.hp,c.hp);d.hp-=n;refresh(d);msg(b,p.name+' usa '+m+' su '+d.name+': -'+n+' PS ('+d.health+'%).');if(m==='Fake Out')d.flinch=true;if(m==='Icy Wind')boost(d,5,-1);if(m==='Snarl')boost(d,3,-1);if(m==='Icy Wind')boost(d,5,-1);if(m==='Snarl')boost(d,3,-1);if(m==='Close Combat'){boost(p,2,-1);boost(p,4,-1)}if(m==='Draco Meteor')boost(p,3,-2);
 if(p.item==='Life Orb'){p.hp-=Math.max(1,F(p.maxHP/10));refresh(p);msg(b,p.name+': recoil Life Orb ('+p.health+'%).')}
 if(['Flare Blitz','Wood Hammer','Brave Bird','Volt Tackle','Wave Crash'].includes(m)){p.hp-=Math.max(1,F(n/3));refresh(p);msg(b,p.name+': recoil '+m+' ('+p.health+'%).')}
 if(d.item==='Focus Sash'&&d.hp===0&&n>=d.maxHP&&d.maxHP>1){d.hp=1;d.item='';refresh(d);msg(b,d.name+' resiste grazie a Focus Sash.')}if(d.item==='Sitrus Berry'&&d.hp>0&&d.hp<=d.maxHP/2){d.hp=clamp(d.hp+F(d.maxHP/4),0,d.maxHP);d.item='';refresh(d);msg(b,d.name+' recupera PS con Sitrus Berry.')}
@@ -52,10 +53,11 @@ if(m==='Fake Tears'||m==='Charm'||m==='Eerie Impulse'){const d=b.team[1-p.side][
 const foes=b.team[1-a.side];let targets=spread.has(m)?foes.slice(0,2).filter(x=>x.hp>0):[foes[a.target===1?1:0]].filter(x=>x?.hp>0);
 if(!spread.has(m)&&b.redirect[1-p.side]?.hp>0)targets=[b.redirect[1-p.side]];
 if(a.side!==targets[0]?.side&&b.quickGuard[1-p.side]&&actionPriority(b,p,m)>0){msg(b,m+' bloccata da Quick Guard.');return}
-if(m==='Will-O-Wisp'||m==='Thunder Wave'||m==='Spore'){for(const t of targets)if(!t.protected&&!t.status){t.status=m==='Will-O-Wisp'?'burn':m==='Thunder Wave'?'paralysis':'sleep';if(t.status==='sleep')t.sleepTurns=2;msg(b,t.name+': '+t.status)}return}
+if(m==='Will-O-Wisp'||m==='Thunder Wave'||m==='Spore'){for(const t of targets)if(!t.protected&&!t.status){if(m==='Spore'&&((core().DATA.dex[t.name]?.types||core().DATA.dex[t.base].types).includes('Grass')||t.item==='Safety Goggles')){msg(b,t.name+' è immune a Spore.');continue}t.status=m==='Will-O-Wisp'?'burn':m==='Thunder Wave'?'paralysis':'sleep';if(t.status==='sleep')t.sleepTurns=2;msg(b,t.name+': '+t.status)}return}
 if(m==='Quash'){const d=targets[0];if(d){d.quashed=b.turn;msg(b,d.name+' subisce Quash (ordine semplificato).')}return}
 if(self.has(m)||ally.has(m)){msg(b,m+' non è ancora simulata fedelmente.');return}
-for(const t of targets)hit(b,p,t,m,targets.length);}
+for(const t of targets)hit(b,p,t,m,targets.length);
+if(m==='Make It Rain')boost(p,3,-1);if(m==='Draco Meteor')boost(p,3,-2);if(m==='Close Combat'){boost(p,2,-1);boost(p,4,-1)}}
 function switchMon(b,side,pos,to,forced=false){const team=b.team[side];to=Number(to);if(to<2||to>=4||!team[to]||team[to].hp<=0||(!forced&&team[pos].hp<=0))return false;const old=team[pos];[team[pos],team[to]]=[team[to],team[pos]];old.stages=[0,0,0,0,0,0];enter(b,team[pos],pos,forced?'sostituzione per KO':'switch');if(!forced)team[pos].firstTurn=b.turn+1;return true}
 function opponent(b){const out=[];for(let i=0;i<2;i++){const p=b.foes[i];if(!p||p.hp<=0)continue;let best=null;for(const move of p.moves){if(!known(move))continue;for(let target=0;target<2;target++){const d=b.ours[target];if(!d?.hp)continue;const value=dmg(b,p,d,move)?.hp||0;const score=value/(d.maxHP||1)+(move==='Fake Out'&&p.firstTurn===b.turn?.1:0);if(!best||score>best.score)best={side:1,pos:i,move,target,score}}}if(best){if(p.megaForm&&!b.megaUsed[1])best.mega=true;out.push(best)}}return out}
 function actionPriority(b,p,m){const statusMove=self.has(m)||(extra.has(m)&&m!=='Fake Out')||core().MOVES[m]?.[2]==='status';return (priority[m]||0)+(p.ability==='Prankster'&&statusMove?1:0)}
