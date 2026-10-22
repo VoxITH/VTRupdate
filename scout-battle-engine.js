@@ -31,8 +31,8 @@ const hpBefore=d.hp;let n=Math.min(d.hp,c.hp);if(d.item==='Focus Sash'&&hpBefore
 if(p.item==='Life Orb'){p.hp-=Math.max(1,F(p.maxHP/10));refresh(p);msg(b,p.name+': recoil Life Orb ('+p.health+'%).')}
 if(['Flare Blitz','Wood Hammer','Brave Bird','Volt Tackle','Wave Crash','Double-Edge'].includes(m)&&p.ability!=='Rock Head'){p.hp-=Math.max(1,F(n/3));refresh(p);msg(b,p.name+': recoil '+m+' ('+p.health+'%).')}
 if(d.item==='Sitrus Berry'&&d.hp>0&&d.hp<=d.maxHP/2){d.hp=clamp(d.hp+F(d.maxHP/4),0,d.maxHP);d.item='';refresh(d);msg(b,d.name+' recupera PS con Sitrus Berry.')}
-if(d.hp===0)msg(b,d.name+' è esausto.')}
-function resolve(b,a){const p=b.team[a.side][a.pos];if(!p||p.hp<=0)return;if(p.flinch){msg(b,p.name+' tentenna.');return}if(p.status==='sleep'){p.sleepTurns=(p.sleepTurns??2)-1;if(p.sleepTurns>0){msg(b,p.name+' dorme e non può agire.');return}p.status=null;msg(b,p.name+' si sveglia.')}if(p.status==='paralysis'&&b.turn%4===3){msg(b,p.name+' è completamente paralizzato.');return}
+if(d.item==='Eject Button'&&n>0&&d.hp>0&&b.team[d.side].some((x,j)=>j>=2&&x.hp>0)){d.item='';b.pivotSwitch={side:d.side,pos:b.team[d.side].indexOf(d)};msg(b,'Eject Button di '+d.name+' si attiva: il giocatore deve scegliere chi mandare in campo.')}if(d.hp===0)msg(b,d.name+' è esausto.')}
+function resolve(b,a){const p=b.team[a.side][a.pos];if(!p||p.hp<=0||(a.p&&a.p!==p))return;if(p.flinch){msg(b,p.name+' tentenna.');return}if(p.status==='sleep'){p.sleepTurns=(p.sleepTurns??2)-1;if(p.sleepTurns>0){msg(b,p.name+' dorme e non può agire.');return}p.status=null;msg(b,p.name+' si sveglia.')}if(p.status==='paralysis'&&b.turn%4===3){msg(b,p.name+' è completamente paralizzato.');return}
 const m=a.move;if(!known(m)){msg(b,'Mossa non ancora supportata: '+m);return}if(m==='Sucker Punch'){const opponentAction=b.actionMap?.[1-a.side]?.[a.target===1?1:0];const activeAttack=opponentAction&&opponentAction.move!=='__switch__'&&opponentAction.move!=='__pass__'&&!self.has(opponentAction.move)&&!ally.has(opponentAction.move)&&!['Will-O-Wisp','Thunder Wave','Spore','Taunt'].includes(opponentAction.move);if(!activeAttack){msg(b,p.name+': Sucker Punch fallisce (il bersaglio non sta attaccando).');return}}if(p.taunt&&['Trick Room','Tailwind','Helping Hand','Protect','Detect','Recover','Roost'].includes(m)){msg(b,p.name+' non può usare '+m+' per Taunt.');return}
 if(m==='First Impression'&&p.firstTurn!==b.turn){msg(b,p.name+': First Impression fallisce fuori dal primo turno.');return}if(m==='Fake Out'&&p.firstTurn!==b.turn){msg(b,p.name+': Fake Out fallisce, non è il primo turno.');return}
 if(m==='Protect'||m==='Detect'){p.protected=true;msg(b,p.name+' si protegge.');return}
@@ -94,12 +94,60 @@ for(const a of queue.filter(a=>a.move!=='__switch__'&&a.mega))mega(b,b.team[a.si
 const ordered=queue.filter(a=>a.move!=='__switch__'&&a.move!=='__pass__').map(a=>({...a,p:b.team[a.side][a.pos]}));
 ordered.sort((a,z)=>actionPriority(b,z.p,z.move)-actionPriority(b,a.p,a.move)||(b.trickRoomTurns?speed(b,a.p)-speed(b,z.p):speed(b,z.p)-speed(b,a.p))||a.side-z.side);
 msg(b,'── Turno '+(b.turn+1)+' ──'+(b.trickRoomTurns?' · Trick Room':''));
-ordered.forEach(a=>resolve(b,a));
-for(const t of b.team.flat()){if(t.hp<=0)continue;if(t.status==='burn'){t.hp-=Math.max(1,F(t.maxHP/16));refresh(t)}if(t.taunt>0)t.taunt--;if(t.item==='Leftovers'){t.hp+=Math.max(1,F(t.maxHP/16));refresh(t)}}
-if(b.trickRoomTurns)b.trickRoomTurns--;for(let i=0;i<2;i++)if(b.tailwind[i])b.tailwind[i]--;for(const sc of b.screens)for(const key of Object.keys(sc)){if(sc[key]>0)sc[key]--}
-if(b.weatherTurns&&! --b.weatherTurns)b.weather='';if(b.terrainTurns&&! --b.terrainTurns)b.terrain='';
-b.turn++;b.replace=[];for(let side=0;side<2;side++)for(let pos=0;pos<2;pos++)if(!b.team[side][pos]?.hp&&b.team[side].some((t,j)=>j>=2&&t.hp>0)){if(side===0){b.replace.push(pos);msg(b,'Il tuo Pokémon nello slot '+(pos+1)+' è esausto: scegli una riserva.')}else{const k=b.team[side].findIndex((t,j)=>j>=2&&t.hp>0);switchMon(b,side,pos,k,true)}}
-if(b.replace.length)b.phase='replace';else if(!b.ours.some(t=>t.hp)||!b.foes.some(t=>t.hp)){b.phase='finished';msg(b,b.ours.some(t=>t.hp)?'Vittoria!':'Sconfitta.')}return b}
+b.remainingActions=ordered;
+return continueRound(b);
+}
+function continueRound(b){
+ while(b.remainingActions.length){
+  const action=b.remainingActions.shift();
+  resolve(b,action);
+  if(b.pivotSwitch){
+    const pivot=b.pivotSwitch;
+    if(pivot.side===0){
+      b.phase='pivot';
+      msg(b,'Eject Button: scegli una riserva per '+b.ours[pivot.pos].name+' prima che il turno continui.');
+      return b;
+    }
+    const reserve=b.team[1].findIndex((x,i)=>i>=2&&x.hp>0);
+    if(reserve>=2)switchPivot(b,1,pivot.pos,reserve);
+    b.pivotSwitch=null;
+  }
+ }
+ b.remainingActions=[];
+ for(const t of b.team.flat()){
+  if(t.hp<=0)continue;
+  if(t.status==='burn'){t.hp-=Math.max(1,F(t.maxHP/16));refresh(t)}
+  if(t.taunt>0)t.taunt--;
+  if(t.item==='Leftovers'){t.hp+=Math.max(1,F(t.maxHP/16));refresh(t)}
+ }
+ if(b.trickRoomTurns)b.trickRoomTurns--;
+ for(let i=0;i<2;i++)if(b.tailwind[i])b.tailwind[i]--;
+ for(const sc of b.screens)for(const key of Object.keys(sc))if(sc[key]>0)sc[key]--;
+ if(b.weatherTurns&&!--b.weatherTurns)b.weather='';
+ if(b.terrainTurns&&!--b.terrainTurns)b.terrain='';
+ b.turn++;b.replace=[];
+ for(let side=0;side<2;side++)for(let pos=0;pos<2;pos++)
+  if(!b.team[side][pos]?.hp&&b.team[side].some((t,j)=>j>=2&&t.hp>0)){
+   if(side===0){b.replace.push(pos);msg(b,'Il Pokémon nello slot '+(pos+1)+' è esausto: scegli la riserva.')}
+   else{const k=b.team[side].findIndex((t,j)=>j>=2&&t.hp>0);switchMon(b,side,pos,k,true)}
+  }
+ if(b.replace.length)b.phase='replace';
+ else if(!b.ours.some(t=>t.hp)||!b.foes.some(t=>t.hp)){b.phase='finished';msg(b,b.ours.some(t=>t.hp)?'Vittoria!':'Sconfitta.')}
+ else b.phase='playing';
+ return b;
+}
+function switchPivot(b,side,pos,to){
+ const team=b.team[side];const k=Number(to);
+ if(k<2||k>=4||!team[k]||!team[k].hp)throw Error('Riserva non valida per Eject Button');
+ const old=team[pos];[team[pos],team[k]]=[team[k],team[pos]];
+ old.stages=[0,0,0,0,0,0];
+ enter(b,team[pos],pos,'Eject Button di '+old.name);
+}
+function pivotReplacement(b,to){
+ if(b.phase!=='pivot'||!b.pivotSwitch||b.pivotSwitch.side!==0)throw Error('Nessuna scelta Eject Button richiesta');
+ switchPivot(b,0,b.pivotSwitch.pos,to);b.pivotSwitch=null;b.phase='playing';
+ return continueRound(b);
+}
 function replacement(b,pos,to){if(!b.replace.includes(pos))throw Error('Nessuna sostituzione richiesta');if(!switchMon(b,0,pos,to,true))throw Error('Riserva non valida');b.replace=b.replace.filter(i=>i!==pos);if(!b.replace.length)b.phase='playing';return b}
-root.SCOUT_BATTLE={make,init,turn,replacement,kind,known,dmg,speed};
+root.SCOUT_BATTLE={make,init,turn,replacement,pivotReplacement,kind,known,dmg,speed};
 })(typeof window!=='undefined'?window:globalThis);
